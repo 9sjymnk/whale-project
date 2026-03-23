@@ -20,8 +20,16 @@
 
 ### 1. 인프라 실행 (Docker)
 
+### 실행
+
 ```bash
 docker-compose up -d
+```
+
+### 종료
+
+```
+docker-compose down -v
 ```
 
 ### 2. 수집기 및 분석기 실행
@@ -33,3 +41,4 @@ python collector/main.py
 # 터미널 2 (분석기)
 
 python collector/analyzer.py
+python -u analyzer.py
