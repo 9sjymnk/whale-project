@@ -1,8 +1,4 @@
-import asyncio
-import websockets
-import json
-import nest_asyncio
-import sys
+import asyncio, websockets, json, nest_asyncio, sys
 from datetime import datetime, timedelta, timezone
 from kafka import KafkaProducer
 
@@ -12,14 +8,13 @@ CODES = ["KRW-BTC", "KRW-ETH"]
 KAFKA_TOPIC = 'upbit-trades'
 KAFKA_SERVER = 'localhost:9092'
 
-# 1. Producer 설정 (기존 유지)
 try:
     producer = KafkaProducer(
         bootstrap_servers=[KAFKA_SERVER],
         value_serializer=lambda v: json.dumps(v).encode('utf-8'),
         acks=1, linger_ms=0, batch_size=0
     )
-    print(f"✅ [수집기] 카프카 서버 연결 성공!")
+    print("✅ [수집기] 카프카 연결 성공!")
 except Exception as e:
     print(f"❌ 연결 실패: {e}"); sys.exit(1)
 
@@ -29,46 +24,34 @@ async def upbit_to_kafka_collector():
         async with websockets.connect(uri) as websocket:
             sub_fmt = [{"ticket":"test"}, {"type":"trade","codes":CODES, "isOnlyRealtime":True}, {"format":"SIMPLE"}]
             await websocket.send(json.dumps(sub_fmt))
-            print("🚀 실시간 수집 시작... (중단하려면 Ctrl+C)")
+            print("🚀 실시간 수집 시작... (중단: Ctrl+C)")
             
             while True:
-                # 💡 데이터를 기다리는 동안 중단될 수 있으므로 내부에서도 예외 처리
-                recv_data = await websocket.recv()
-                data = json.loads(recv_data)
+                data = json.loads(await websocket.recv())
                 now_kst = datetime.now(KST)
                 timestamp = now_kst.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
                 
+                # 💡 예측 모델을 위한 필수 변수 3종(pcp, c, sid) 추가
                 payload = {
                     'timestamp': timestamp,
                     'code': data.get('cd'), 
-                    'price': data.get('tp'), 
-                    'volume': data.get('tv'),
-                    'side': data.get('ab')
+                    'price': data.get('tp'),      # 현재가
+                    'volume': data.get('tv'),     # 체결량
+                    'side': data.get('ab'),       # ASK/BID
+                    'pcp': data.get('pcp'),       # 전일 종가 (수익률 기준점)
+                    'change': data.get('c'),      # RISE/FALL/EVEN (시장 상태)
+                    'sid': data.get('sid')        # 체결 고유 번호 (중복 방지)
                 }
 
                 producer.send(KAFKA_TOPIC, value=payload)
                 producer.flush() 
 
-                # 타임스탬프가 포함된 실시간 로그
                 print(f"[{timestamp}] 📡 [전송] {payload['code']} | {payload['price']:,.0f}원", flush=True)
 
-    except asyncio.CancelledError:
-        # 💡 강제 종료 시 발생하는 비동기 예외를 잡아서 조용히 넘깁니다.
-        pass
-    except Exception as e:
-        print(f"❌ 에러 발생: {e}")
+    except asyncio.CancelledError: pass
+    except Exception as e: print(f"❌ 에러: {e}")
 
 if __name__ == "__main__":
-    try:
-        # 비동기 루프 실행
-        asyncio.run(upbit_to_kafka_collector())
-    except KeyboardInterrupt:
-        # 💡 [핵심] Ctrl+C 입력 시 에러 메시지 대신 출력할 문구
-        print("\n\n👋 [알림] 사용자가 수집을 중단했습니다.")
-    finally:
-        # 🧹 종료 전 데이터 정리 및 Kafka 닫기
-        print("🧹 남은 데이터를 정리하고 Kafka 연결을 해제합니다...")
-        producer.flush()
-        producer.close()
-        print("✅ 수집기 종료 완료.")
-        sys.exit(0) # 프로세스를 깔끔하게 종료
+    try: asyncio.run(upbit_to_kafka_collector())
+    except KeyboardInterrupt: print("\n👋 수집 중단.")
+    finally: producer.close(); sys.exit(0)
