@@ -1,0 +1,503 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Whale Watcher Pro V63 (Tooltip Final Solution)</title>
+    <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
+    <style>
+      :root {
+        --sidebar-bg: #f0f2f6;
+        --main-bg: #ffffff;
+        --text: #31333f;
+        --border: #e6e9ef;
+        --up: #f6465d;
+        --down: #3165df;
+        --whale-buy: #00ff41;
+        --chart-line: #787b86;
+      }
+      body {
+        background-color: var(--main-bg);
+        color: var(--text);
+        margin: 0;
+        display: flex;
+        font-family: 'Source Sans Pro', sans-serif;
+        height: 100vh;
+        overflow: hidden;
+      }
+      .sidebar {
+        width: 330px;
+        background-color: var(--sidebar-bg);
+        height: 100vh;
+        padding: 40px 20px;
+        border-right: 1px solid var(--border);
+        box-sizing: border-box;
+      }
+      .main-content {
+        flex: 1;
+        padding: 40px 60px;
+        overflow-y: auto;
+        position: relative;
+      }
+
+      /* Streamlit Black 지표 카드 스타일 */
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        margin-bottom: 2rem;
+      }
+      .metric-card {
+        background: #1a1a1a;
+        color: white;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        text-align: center;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      .m-lbl {
+        color: #aaa;
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
+      }
+      .m-val {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: white;
+        margin: 0.5rem 0;
+      }
+      .delta {
+        font-size: 1rem;
+        font-weight: 500;
+      }
+
+      .chart-controls {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .chart-btn {
+        background-color: white;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 5px 15px;
+        font-size: 0.8rem;
+        cursor: pointer;
+      }
+      .chart-btn.active {
+        background-color: var(--chart-line);
+        color: white;
+      }
+
+      /* 차트 영역에 position: relative 부여 */
+      #chart {
+        width: 100%;
+        height: 500px;
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        margin-bottom: 2rem;
+        position: relative;
+        background: #fff;
+      }
+
+      /* [최종 해결] 툴팁 스타일 고도화 */
+      #chart_tooltip {
+        position: absolute;
+        display: none;
+        width: 170px;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.98);
+        border: 1px solid #d1d4dc;
+        border-radius: 4px;
+        color: #131722;
+        z-index: 9999; /* 무조건 최상단 */
+        pointer-events: none; /* 마우스 간섭 방지 */
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        font-size: 12px;
+        line-height: 1.6;
+      }
+
+      /* 고래 토스트 알림 */
+      #toast_container {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 10000;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .toast {
+        min-width: 250px;
+        padding: 15px 20px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 600;
+        animation: slideIn 0.3s ease-out;
+      }
+      @keyframes slideIn {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      .log-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.82rem;
+      }
+      .log-table th {
+        text-align: left;
+        padding: 12px;
+        border-bottom: 2px solid var(--border);
+        color: #5f6368;
+      }
+      .log-table td {
+        padding: 12px;
+        border-bottom: 1px solid var(--border);
+      }
+      select,
+      input[type='range'] {
+        width: 100%;
+        padding: 10px;
+        border-radius: 4px;
+        border: 1px solid #d3d3d3;
+        margin: 10px 0 25px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="toast_container"></div>
+    <div class="sidebar">
+      <h2>🐳 Control Panel</h2>
+      <label class="m-lbl">코인 선택</label>
+      <select id="coin_select" onchange="connectWS()">
+        <option value="KRW-BTC">KRW-BTC</option>
+        <option value="KRW-ETH">KRW-ETH</option>
+      </select>
+      <label class="m-lbl">고래 기준 (억원)</label>
+      <input
+        type="range"
+        id="threshold"
+        min="0.1"
+        max="10"
+        step="0.1"
+        value="1.0"
+        oninput="handleSlider(this.value)"
+      />
+      <div
+        id="th_val"
+        style="
+          text-align: right;
+          font-weight: bold;
+          color: var(--up);
+          margin-top: -20px;
+        "
+      >
+        1.0
+      </div>
+    </div>
+
+    <div class="main-content">
+      <h1>🛡️ Whale Watcher Intelligence</h1>
+      <div class="metrics">
+        <div class="metric-card">
+          <div class="m-lbl">실시간 가격 (09:00 KST)</div>
+          <div id="p_val" class="m-val">₩0</div>
+          <div id="p_delta" class="delta">0.00% (₩0)</div>
+        </div>
+        <div class="metric-card">
+          <div class="m-lbl">24H 고래 매수액 (누적)</div>
+          <div id="w_val" class="m-val">₩0억</div>
+          <div id="w_cnt" class="delta" style="color: var(--whale-buy)">
+            0건
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="m-lbl">고래 매수 강도</div>
+          <div id="s_val" class="m-val">50.0%</div>
+          <div id="s_delta" class="delta" style="margin-top: 5px">%</div>
+        </div>
+      </div>
+
+      <div class="chart-controls">
+        <button
+          class="chart-btn active"
+          id="btn_1s"
+          onclick="changeTimeframe(1)"
+        >
+          1초
+        </button>
+        <button class="chart-btn" id="btn_1m" onclick="changeTimeframe(60)">
+          1분
+        </button>
+        <button class="chart-btn" id="btn_30m" onclick="changeTimeframe(1800)">
+          30분
+        </button>
+        <button class="chart-btn" id="btn_1h" onclick="changeTimeframe(3600)">
+          1시간
+        </button>
+      </div>
+
+      <div id="chart">
+        <div id="chart_tooltip"></div>
+      </div>
+
+      <div
+        style="
+          background: white;
+          padding: 20px;
+          border-radius: 0.5rem;
+          border: 1px solid var(--border);
+        "
+      >
+        <h3>🔔 실시간 고래 활동 로그</h3>
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th>시간 (KST)</th>
+              <th>구분</th>
+              <th>가격</th>
+              <th>수량</th>
+              <th>총액</th>
+            </tr>
+          </thead>
+          <tbody id="log_body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <script>
+      let chart,
+        series,
+        socket,
+        openPrice = 0,
+        currentInterval = 1;
+      let fullHistory = [],
+        buyVol = 0,
+        totalVol = 0,
+        buyCnt = 0;
+
+      function handleSlider(v) {
+        document.getElementById('th_val').innerText = v;
+        refreshUI();
+      }
+
+      function showToast(side, amount, price) {
+        const container = document.getElementById('toast_container');
+        const toast = document.createElement('div');
+        const isBuy = side === 'BID';
+        toast.className = 'toast';
+        toast.style.backgroundColor = isBuy
+          ? 'rgba(0, 128, 0, 0.95)'
+          : 'rgba(200, 0, 0, 0.95)';
+        toast.innerHTML = `🐳 <strong>고래 ${isBuy ? '매수' : '매도'} 포착!</strong><br>규모: ${(amount / 1e8).toFixed(2)}억원<br>가격: ₩${price.toLocaleString()}`;
+        container.appendChild(toast);
+        setTimeout(() => {
+          toast.style.opacity = '0';
+          setTimeout(() => toast.remove(), 500);
+        }, 3000);
+      }
+
+      function changeTimeframe(sec) {
+        currentInterval = sec;
+        document
+          .querySelectorAll('.chart-btn')
+          .forEach((b) => b.classList.remove('active'));
+        if (sec === 1)
+          document.getElementById('btn_1s').classList.add('active');
+        else if (sec === 60)
+          document.getElementById('btn_1m').classList.add('active');
+        else if (sec === 1800)
+          document.getElementById('btn_30m').classList.add('active');
+        else if (sec === 3600)
+          document.getElementById('btn_1h').classList.add('active');
+        chart.applyOptions({ timeScale: { secondsVisible: sec === 1 } });
+        refreshUI();
+      }
+
+      function refreshUI() {
+        if (!fullHistory.length) return;
+        const th = parseFloat(document.getElementById('threshold').value) * 1e8;
+
+        // 1. 차트 렌더링 (실시간 엣지 반영)
+        const buckets = new Map();
+        fullHistory.forEach((d) => {
+          const roundedTime =
+            Math.floor(d.time / currentInterval) * currentInterval;
+          buckets.set(roundedTime, d.price);
+        });
+        const chartData = Array.from(buckets.entries())
+          .sort((a, b) => a[0] - b[0])
+          .map((e) => ({ time: e[0], value: e[1] }));
+        series.setData(chartData);
+
+        // 2. 마커 및 로그
+        buyVol = 0;
+        totalVol = 0;
+        buyCnt = 0;
+        const markers = [];
+        const logBody = document.getElementById('log_body');
+        logBody.innerHTML = '';
+        const nowKst = Math.floor(Date.now() / 1000) + 32400;
+
+        [...fullHistory]
+          .sort((a, b) => b.time - a.time)
+          .forEach((d) => {
+            if (d.amount >= th) {
+              if (d.time >= nowKst - 86400) {
+                totalVol += d.amount;
+                if (d.side === 'BID') {
+                  buyVol += d.amount;
+                  buyCnt++;
+                }
+              }
+              if (logBody.children.length < 100) addLogRow(d);
+              markers.push({
+                time: d.time,
+                position: 'inBar',
+                color: d.side === 'BID' ? '#00ff41' : '#f6465d',
+                shape: 'circle',
+                text: d.side === 'BID' ? 'B' : 'S',
+              });
+            }
+          });
+        series.setMarkers(markers.sort((a, b) => a.time - b.time));
+        updateMetrics(fullHistory[fullHistory.length - 1].price);
+      }
+
+      function updateMetrics(currP) {
+        const diff = currP - openPrice;
+        const pct = ((diff / openPrice) * 100).toFixed(2);
+        document.getElementById('p_val').innerText =
+          '₩' + currP.toLocaleString();
+        const pDelta = document.getElementById('p_delta');
+        pDelta.innerText = `${diff >= 0 ? '+' : ''}${pct}% (₩${Math.abs(Math.round(diff)).toLocaleString()})`;
+        pDelta.style.color = diff >= 0 ? 'var(--up)' : 'var(--down)';
+
+        document.getElementById('w_val').innerText =
+          '₩' + (buyVol / 1e8).toFixed(1) + '억';
+        const wCnt = document.getElementById('w_cnt');
+        wCnt.innerText = buyCnt + '건';
+        wCnt.style.color = 'var(--whale-buy)';
+
+        const strength = totalVol > 0 ? (buyVol / totalVol) * 100 : 50.0;
+        const sDelta = (strength - 50.0).toFixed(1);
+        document.getElementById('s_val').innerText = strength.toFixed(1) + '%';
+        const sdEl = document.getElementById('s_delta');
+        sdEl.innerText = `${sDelta >= 0 ? '↑' : '↓'} ${Math.abs(sDelta)}%`;
+        sdEl.style.color = sDelta >= 0 ? 'var(--up)' : 'var(--down)';
+      }
+
+      function addLogRow(d) {
+        const dateObj = new Date((d.time - 32400) * 1000);
+        const timeStr = `${(dateObj.getMonth() + 1).toString().padStart(2, '0')}.${dateObj.getDate().toString().padStart(2, '0')} ${dateObj.toLocaleTimeString('ko-KR', { hour12: false })}`;
+        const row = `<tr><td>${timeStr}</td><td style="color:${d.side === 'BID' ? '#00ff41' : 'var(--up)'}">${d.side === 'BID' ? '매수🟢' : '매도🔴'}</td><td>₩${d.price.toLocaleString()}</td><td>${(d.amount / d.price).toFixed(4)}</td><td><b>₩${(d.amount / 1e8).toFixed(2)}억</b></td></tr>`;
+        document
+          .getElementById('log_body')
+          .insertAdjacentHTML('beforeend', row);
+      }
+
+      function initChart() {
+        const container = document.getElementById('chart');
+        const tooltip = document.getElementById('chart_tooltip');
+        container.innerHTML = '';
+        container.appendChild(tooltip); // 툴팁 다시 넣어줌
+
+        chart = LightweightCharts.createChart(container, {
+          width: container.offsetWidth,
+          height: 500,
+          layout: { backgroundColor: '#ffffff', textColor: '#31333f' },
+          grid: {
+            vertLines: { color: '#f0f2f6' },
+            horzLines: { color: '#f0f2f6' },
+          },
+          timeScale: { timeVisible: true, secondsVisible: true },
+        });
+        series = chart.addAreaSeries({
+          lineColor: '#787b86',
+          topColor: 'rgba(120, 123, 134, 0.2)',
+          bottomColor: 'rgba(120, 123, 134, 0.0)',
+          lineWidth: 2,
+        });
+
+        // [최종 복구] 마우스 툴팁 하이퍼 로직
+        chart.subscribeCrosshairMove((param) => {
+          if (
+            param.point === undefined ||
+            !param.time ||
+            param.point.x < 0 ||
+            param.point.x > container.offsetWidth ||
+            param.point.y < 0 ||
+            param.point.y > 500
+          ) {
+            tooltip.style.display = 'none';
+          } else {
+            const data = param.seriesPrices.get(series);
+            if (!data) {
+              tooltip.style.display = 'none';
+              return;
+            }
+
+            tooltip.style.display = 'block';
+            const price = data;
+            const dateObj = new Date((param.time - 32400) * 1000);
+            const timeStr = dateObj.toLocaleTimeString('ko-KR', {
+              hour12: false,
+            });
+            const diff = price - openPrice;
+            const pct = ((diff / openPrice) * 100).toFixed(2);
+
+            tooltip.innerHTML = `
+                        <div style="font-weight:bold; margin-bottom:5px; color:#5d606b;">${timeStr} (KST)</div>
+                        <div style="font-size:15px; font-weight:bold; margin-bottom:3px;">₩${price.toLocaleString()}</div>
+                        <div style="color:${diff >= 0 ? '#f6465d' : '#3165df'}; font-weight:bold;">
+                            ${diff >= 0 ? '▲ +' : '▼ '}${pct}%
+                        </div>
+                    `;
+
+            // 위치 계산 (마우스 커서를 가리지 않게 오른쪽 혹은 왼쪽으로 띄움)
+            let left = param.point.x + 20;
+            if (left > container.offsetWidth - 180) left = param.point.x - 190;
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = param.point.y + 20 + 'px';
+          }
+        });
+      }
+
+      function connectWS() {
+        if (socket) socket.close();
+        initChart();
+        const coin = document.getElementById('coin_select').value;
+        socket = new WebSocket(`ws://localhost:8000/ws/${coin}`);
+        socket.onmessage = (e) => {
+          const res = JSON.parse(e.data);
+          if (res.open_price) openPrice = res.open_price;
+          if (res.type === 'history') {
+            fullHistory = res.data;
+            refreshUI();
+          } else if (res.type === 'tick') {
+            fullHistory.push(res);
+            if (fullHistory.length > 5000) fullHistory.shift();
+            const th =
+              parseFloat(document.getElementById('threshold').value) * 1e8;
+            if (res.amount >= th) showToast(res.side, res.amount, res.price);
+            updateMetrics(res.price);
+            refreshUI(); // 1분 모드에서도 실시간으로 끝점 움직이게 함
+          }
+        };
+      }
+      window.onresize = () =>
+        chart.applyOptions({
+          width: document.getElementById('chart').offsetWidth,
+        });
+      connectWS();
+    </script>
+  </body>
+</html>

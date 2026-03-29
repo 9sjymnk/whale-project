@@ -9,17 +9,18 @@ DB_CONFIG = {"host": "localhost",
 
 def main():
     # 카프카 컨슈머 (새 group_id로 옛날 데이터 무시)
-    new_group = f"whale-v2-{random.randint(100, 999)}"
+    fixed_group = "whale-analyzer-group-v1"
     consumer = KafkaConsumer(
         'upbit-trades',
         bootstrap_servers=['localhost:9092'],
         value_deserializer=lambda v: json.loads(v.decode('utf-8')),
-        auto_offset_reset='latest', # 💡 실행 시점부터의 데이터만 받음
-        group_id=new_group
+        auto_offset_reset='earliest', # 💡 실행 시점부터의 데이터만 받음
+        group_id=fixed_group,
+        enable_auto_commit=True
     )
     
     conn = psycopg2.connect(**DB_CONFIG); cur = conn.cursor()
-    print(f"🚀 [분석기] 시작! (Group: {new_group})")
+    print(f"🚀 [분석기] 시작! (Group: {fixed_group})")
 
     try:
         for msg in consumer:
@@ -37,11 +38,17 @@ def main():
             # 1. 화면 출력 (수익률 포함)
             print(f"📥 [{d['timestamp']}] {d['code']} | {side_txt} | {sign}{abs(rate):.2f}% | {amt:,.0f}원")
 
-            # 2. DB 저장 (모든 변수 기록)
+           # 2. DB 저장 (ON CONFLICT 구문 추가로 중복 에러 방지)
             cur.execute("""
-                INSERT INTO trades (timestamp, code, price, volume, side, total_amount, prev_closing_price, change_rate, sequential_id)
+                INSERT INTO trades (
+                    timestamp, code, price, volume, side, 
+                    total_amount, prev_closing_price, change_rate, sequential_id
+                )
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, (d['timestamp'], d['code'], tp, d.get('volume'), d.get('side'), amt, pcp, rate, d.get('sid')))
+                ON CONFLICT (sequential_id) DO NOTHING
+            """, (d['timestamp'], d['code'], tp, d.get('volume'), d.get('side'), 
+                  amt, pcp, rate, d.get('sid')))
+            
             conn.commit()
 
             if amt >= 100000000:
