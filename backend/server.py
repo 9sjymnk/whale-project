@@ -4,12 +4,18 @@ from fastapi.middleware.cors import CORSMiddleware
 import asyncio, psycopg2, requests, json
 from datetime import datetime, timezone, timedelta
 
+# .env 로드
+load_dotenv()
+
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 DB_CONFIG = {
-    "host": "3.35.207.98", "database": "whale_db",
-    "user": "postgres", "password": "7124", "port": 5432
+    "host": os.getenv("DB_HOST"),
+    "database": os.getenv("DB_NAME"),
+    "user": os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASS"),
+    "port": int(os.getenv("DB_PORT", 5432))
 }
 
 def get_official_open_price(market):

@@ -3,3 +3,5 @@ backend/.git/
 __pycache__/
 venv/
 .envdata/ 
+.env 
+data/

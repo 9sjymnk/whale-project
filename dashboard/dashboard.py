@@ -5,13 +5,16 @@ import requests
 import plotly.graph_objects as go
 from datetime import datetime
 
-# --- 1. DB 설정 (본인 비번 필수 수정!) ---
+# .env 로드
+load_dotenv()
+
+# [보안 수정] 환경 변수 적용
 DB_CONFIG = {
-    "host": "3.35.207.98", 
-    "database": "whale_db",
-    "user": "postgres",
-    "password": "7124", 
-    "port": 5432
+    "host": os.getenv("DB_HOST"),
+    "database": os.getenv("DB_NAME"),
+    "user": os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASS"),
+    "port": int(os.getenv("DB_PORT", 5432))
 }
 
 st.set_page_config(page_title="Whale Watcher Intelligence", layout="wide")
