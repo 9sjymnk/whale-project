@@ -28,3 +28,11 @@ pip install fastapi uvicorn psycopg2 requests
 cd backend
 uvicorn server:app --reload --host 0.0.0.0 --port 8000
 ```
+
+---
+
+## 📐 네이밍 컨벤션 & 프로젝트 구조
+
+파일명, 폴더명, 변수명, API 엔드포인트 등 코드 작성 규칙은 아래 문서를 참고하세요.
+
+→ **[CONVENTIONS.md](./CONVENTIONS.md)**
