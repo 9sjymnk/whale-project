@@ -25,11 +25,11 @@ whale-project/
 
 ### 추가 권장 폴더 설명
 
-| 폴더 | 목적 | 예시 파일 |
-|------|------|-----------|
-| `docs/` | 아키텍처 다이어그램, API 명세, 회의록 | `architecture.md`, `api-spec.md` |
-| `tests/` | 각 모듈별 pytest 테스트 코드 | `test_server.py`, `test_analyzer.py` |
-| `models/` | 학습 완료 모델 바이너리 | `xgboost_btc_1m.pkl`, `rf_eth_5m.pkl` |
+| 폴더      | 목적                                  | 예시 파일                             |
+| --------- | ------------------------------------- | ------------------------------------- |
+| `docs/`   | 아키텍처 다이어그램, API 명세, 회의록 | `architecture.md`, `api-spec.md`      |
+| `tests/`  | 각 모듈별 pytest 테스트 코드          | `test_server.py`, `test_analyzer.py`  |
+| `models/` | 학습 완료 모델 바이너리               | `xgboost_btc_1m.pkl`, `rf_eth_5m.pkl` |
 
 > `docs/` 폴더로 이동 권장: 현재 루트의 `tech-stack-description.txt`, `tech-stack-diagram.html`
 
@@ -38,6 +38,7 @@ whale-project/
 ## 2. 파일 네이밍 규칙
 
 ### Python (`.py`)
+
 - **규칙**: `snake_case` (소문자 + 언더스코어)
 - 역할이 명확하게 드러나는 이름 사용. 폴더명과 중복 금지.
 
@@ -54,6 +55,7 @@ whale-project/
 ```
 
 ### HTML / CSS / JS (`.html`, `.css`, `.js`)
+
 - **규칙**: `kebab-case` (소문자 + 하이픈)
 
 ```
@@ -66,6 +68,7 @@ whale-project/
 ```
 
 ### 설정·문서 파일
+
 - **규칙**: `kebab-case` + 소문자 확장자
 
 ```
@@ -79,6 +82,7 @@ whale-project/
 ```
 
 ### PEM / 키 파일
+
 - **규칙**: `kebab-case`, 특수문자 금지, `.gitignore`에 반드시 등록
 
 ```
@@ -90,13 +94,13 @@ whale-project/
 
 ## 3. Python 코드 내부 규칙
 
-| 대상 | 규칙 | 예시 |
-|------|------|------|
-| 변수 | `snake_case` | `open_price`, `trade_id` |
-| 함수 | `snake_case` | `get_daily_whale_log()` |
-| 클래스 | `PascalCase` | `UserRegister`, `TradeEvent` |
-| 상수 | `SCREAMING_SNAKE_CASE` | `DB_CONFIG`, `KAFKA_TOPIC`, `KST` |
-| Private 함수/변수 | `_leading_underscore` | `_db()`, `_hash()`, `_verify()` |
+| 대상                | 규칙                        | 예시                               |
+| ------------------- | --------------------------- | ---------------------------------- |
+| 변수                | `snake_case`                | `open_price`, `trade_id`           |
+| 함수                | `snake_case`                | `get_daily_whale_log()`            |
+| 클래스              | `PascalCase`                | `UserRegister`, `TradeEvent`       |
+| 상수                | `SCREAMING_SNAKE_CASE`      | `DB_CONFIG`, `KAFKA_TOPIC`, `KST`  |
+| Private 함수/변수   | `_leading_underscore`       | `_db()`, `_hash()`, `_verify()`    |
 | FastAPI 라우터 함수 | `snake_case` + 동사 or 명사 | `get_hourly_whale()`, `register()` |
 
 ```python
@@ -118,13 +122,13 @@ def get_daily_whale_log(coin: str):       # public 함수 (동사+명사)
 
 ## 4. JavaScript 코드 내부 규칙
 
-| 대상 | 규칙 | 예시 |
-|------|------|------|
-| 변수 | `camelCase` | `openPrice`, `exchangeRate` |
-| 함수 | `camelCase` + 동사 시작 | `showPage()`, `loadWhaleAnalysis()` |
-| 상수 | `SCREAMING_SNAKE_CASE` | `API_BASE` |
-| 클래스 생성자 | `PascalCase` | `LightweightCharts` |
-| 전역 상태 변수 | `camelCase` | `whaleHourlyData`, `wsStarted` |
+| 대상           | 규칙                    | 예시                                |
+| -------------- | ----------------------- | ----------------------------------- |
+| 변수           | `camelCase`             | `openPrice`, `exchangeRate`         |
+| 함수           | `camelCase` + 동사 시작 | `showPage()`, `loadWhaleAnalysis()` |
+| 상수           | `SCREAMING_SNAKE_CASE`  | `API_BASE`                          |
+| 클래스 생성자  | `PascalCase`            | `LightweightCharts`                 |
+| 전역 상태 변수 | `camelCase`             | `whaleHourlyData`, `wsStarted`      |
 
 ```javascript
 // ✅ 올바른 예시
@@ -142,10 +146,10 @@ function toggleWhaleLog() { ... }           // toggle + 명사
 
 ## 5. HTML ID / CSS 클래스 규칙
 
-| 대상 | 규칙 | 예시 |
-|------|------|------|
-| HTML ID | `snake_case` | `page_whale`, `log_body`, `nav_whale_btn` |
-| CSS 클래스 | `kebab-case` | `log-section`, `hour-col`, `nav-link` |
+| 대상                  | 규칙                          | 예시                                        |
+| --------------------- | ----------------------------- | ------------------------------------------- |
+| HTML ID               | `snake_case`                  | `page_whale`, `log_body`, `nav_whale_btn`   |
+| CSS 클래스            | `kebab-case`                  | `log-section`, `hour-col`, `nav-link`       |
 | JS에서 getElementById | ID는 `snake_case` 그대로 사용 | `document.getElementById('whale_log_body')` |
 
 ```html
@@ -155,8 +159,10 @@ function toggleWhaleLog() { ... }           // toggle + 명사
 </div>
 
 <!-- ❌ 금지 -->
-<div id="pageWhale" ...>   <!-- ID에 camelCase 금지 -->
-<div class="logSection">   <!-- 클래스에 camelCase 금지 -->
+<div id="pageWhale" ...>
+  <!-- ID에 camelCase 금지 -->
+  <div class="logSection"><!-- 클래스에 camelCase 금지 --></div>
+</div>
 ```
 
 ---
@@ -198,15 +204,15 @@ refactor/server-cleanup           # 리팩토링
 - **언어**: 한글 또는 영어 중 하나로 통일 (현재 혼용 → 한글 권장)
 - **형식**: `타입: 내용 (50자 이내)`
 
-| 타입 | 사용 시 |
-|------|---------|
-| `feat` | 새 기능 추가 |
-| `fix` | 버그 수정 |
-| `docs` | 문서 수정 |
+| 타입       | 사용 시                         |
+| ---------- | ------------------------------- |
+| `feat`     | 새 기능 추가                    |
+| `fix`      | 버그 수정                       |
+| `docs`     | 문서 수정                       |
 | `refactor` | 코드 구조 개선 (기능 변화 없음) |
-| `style` | 포맷팅, 들여쓰기 등 |
-| `test` | 테스트 코드 추가·수정 |
-| `chore` | 빌드 설정, 패키지 관리 |
+| `style`    | 포맷팅, 들여쓰기 등             |
+| `test`     | 테스트 코드 추가·수정           |
+| `chore`    | 빌드 설정, 패키지 관리          |
 
 ```bash
 # ✅ 올바른 예시
@@ -224,13 +230,13 @@ update stuff               ← 내용 불명확
 
 ## 8. 파일명 변경 이력
 
-| 이전 | 이후 | 비고 |
-|------|------|------|
-| `collector/main.py` | `collector/collector_upbit.py` | ✅ 완료 |
-| `collector/main_aws.py` | `collector/collector_aws.py` | ✅ 완료 |
-| `analyzer/analyzer.py` | `analyzer/trade_analyzer.py` | ✅ 완료 |
-| `dashboard/dashboard.py` | `dashboard/streamlit_app.py` | ✅ 완료 |
-| `tech-stack-description.txt` | `docs/tech-stack.md` | ✅ 완료 |
-| `tech-stack-diagram.html` | `docs/tech-stack-diagram.html` | ✅ 완료 |
-| `AgileProcess_6팀.xlsx` | `docs/AgileProcess_6팀.xlsx` | ⏳ Excel 열려있어 재시작 후 직접 이동 |
-| `Whale-Collector(KEY).pem` | `whale-collector-key.pem` | ⏳ 권한 문제로 직접 이름 변경 필요 |
+| 이전                         | 이후                           | 비고    |
+| ---------------------------- | ------------------------------ | ------- |
+| `collector/main.py`          | `collector/collector_upbit.py` | ✅ 완료 |
+| `collector/main_aws.py`      | `collector/collector_aws.py`   | ✅ 완료 |
+| `analyzer/analyzer.py`       | `analyzer/trade_analyzer.py`   | ✅ 완료 |
+| `dashboard/dashboard.py`     | `dashboard/streamlit_app.py`   | ✅ 완료 |
+| `tech-stack-description.txt` | `docs/tech-stack.md`           | ✅ 완료 |
+| `tech-stack-diagram.html`    | `docs/tech-stack-diagram.html` | ✅ 완료 |
+| `AgileProcess_6팀.xlsx`      | `docs/AgileProcess_6팀.xlsx`   | ✅ 완료 |
+| `Whale-Collector(KEY).pem`   | `whale-collector-key.pem`      | ✅ 완료 |
