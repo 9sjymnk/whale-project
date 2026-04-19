@@ -155,13 +155,17 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
         open_price = get_official_open_price(coin)
         last_update_date = datetime.now(timezone(timedelta(hours=9))).date()
 
-        # [최적화] 전체 조회(163만행·11초) → 최근 24시간만 조회(~0.7초)
+        # [최적화] 전체 조회(163만행·11초) → 최근 2000건만 조회(즉시)
         conn = psycopg2.connect(**DB_CONFIG); cur = conn.cursor()
         cur.execute("""
             SELECT price, total_amount, side, timestamp, id
-            FROM trades
-            WHERE code = %s
-              AND timestamp >= NOW() - INTERVAL '24 hours'
+            FROM (
+                SELECT price, total_amount, side, timestamp, id
+                FROM trades
+                WHERE code = %s
+                ORDER BY timestamp DESC, id DESC
+                LIMIT 2000
+            ) sub
             ORDER BY timestamp ASC, id ASC
         """, (coin,))
         history = cur.fetchall()
