@@ -1989,16 +1989,34 @@
       let intentionalClose = false;
 
       function reconnectWS() {
-        if (socket) { intentionalClose = true; socket.close(); intentionalClose = false; }
-        fullHistory = [];
-        backfillBuffer = [];
-        backfillInProgress = false;
-        dailyData = [];
-        dailyExpanded = false;
-        initChart();
-        connectWS();
-        loadDaily();
-        loadAiPrediction();
+        // intentionalClose를 true로 유지한 채 onclose에서 리셋 — 타이머 오발 방지
+        if (socket && socket.readyState !== WebSocket.CLOSED) {
+          intentionalClose = true;
+          socket.onclose = () => {
+            intentionalClose = false;
+            // 소켓이 완전히 닫힌 후 새 코인 연결 시작
+            fullHistory = [];
+            backfillBuffer = [];
+            backfillInProgress = false;
+            dailyData = [];
+            dailyExpanded = false;
+            initChart();
+            connectWS();
+            loadDaily();
+            loadAiPrediction();
+          };
+          socket.close();
+        } else {
+          fullHistory = [];
+          backfillBuffer = [];
+          backfillInProgress = false;
+          dailyData = [];
+          dailyExpanded = false;
+          initChart();
+          connectWS();
+          loadDaily();
+          loadAiPrediction();
+        }
       }
 
       function connectWS() {
@@ -2067,8 +2085,12 @@
           }
         };
         socket.onclose = () => {
-          document.getElementById('conn_status').textContent = '재연결 중...';
-          if (!intentionalClose) reconnectTimer = setTimeout(() => connectWS(), 3000);
+          const wasIntentional = intentionalClose;
+          intentionalClose = false;
+          if (!wasIntentional) {
+            document.getElementById('conn_status').textContent = '재연결 중...';
+            reconnectTimer = setTimeout(() => connectWS(), 3000);
+          }
         };
         socket.onerror = () => { socket.close(); };
       }
