@@ -2008,13 +2008,13 @@
             refreshUI();
           } else if (res.type === 'history_prepend') {
             fullHistory = [...res.data, ...fullHistory];
-            refreshUI();
-            const pct = Math.round((res.chunk / res.total_chunks) * 100);
-            const loaded = (res.chunk * 5000 > res.total_rows ? res.total_rows : res.chunk * 5000).toLocaleString();
+            // 10청크마다 1번만 차트 갱신 (매번 갱신하면 수백만 행 반복으로 브라우저 프리징)
+            if (res.chunk % 10 === 0) refreshUI();
             document.getElementById('backfill_status').style.display = 'block';
             document.getElementById('backfill_status').textContent =
-              `📂 과거 데이터 로딩 중... ${pct}% (${loaded} / ${res.total_rows.toLocaleString()}건)`;
+              `📂 과거 데이터 로딩 중... ${res.total_sent.toLocaleString()}건`;
           } else if (res.type === 'backfill_done') {
+            refreshUI();
             const el = document.getElementById('backfill_status');
             if (res.total === 0) {
               el.style.display = 'none';
