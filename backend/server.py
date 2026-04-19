@@ -213,7 +213,7 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
                     cur.execute("""
                         INSERT INTO trades (timestamp, code, price, volume, side, total_amount, pcp, change, sid)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (timestamp, code) DO NOTHING
+                        ON CONFLICT (sid, code) DO NOTHING
                         RETURNING id
                     """, (ts, coin, price, volume, side, amount, pcp, change_dir, sid))
                     row = cur.fetchone()

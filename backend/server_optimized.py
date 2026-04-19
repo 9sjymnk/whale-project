@@ -187,7 +187,7 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
         # ── Phase 2: 나머지 전체 데이터를 ID 기반 페이지네이션으로 백그라운드 전송 ──
         async def backfill():
             try:
-                CHUNK = 5000
+                CHUNK = 10000
                 total_sent  = 0
                 chunk_idx   = 0
                 current_max_id = oldest_id  # 이미 전송한 최소 id; 그보다 이전 데이터를 역순으로 가져옴
@@ -228,7 +228,7 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
                             "chunk": chunk_idx,
                             "total_sent": total_sent,
                         })
-                        await asyncio.sleep(0.05)
+                        await asyncio.sleep(0.02)
                 finally:
                     cur2.close(); conn2.close()
 
@@ -275,7 +275,7 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
                     cur.execute("""
                         INSERT INTO trades (timestamp, code, price, volume, side, total_amount, pcp, change, sid)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (timestamp, code) DO NOTHING
+                        ON CONFLICT (sid, code) DO NOTHING
                         RETURNING id
                     """, (ts, coin, price, volume, side, amount, pcp, change_dir, sid))
                     row = cur.fetchone()

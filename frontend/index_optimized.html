@@ -1257,7 +1257,7 @@
       <div class="sidebar">
         <div class="control-group">
           <label class="m-lbl">코인 선택</label>
-          <select id="coin_select" onchange="reconnectWS()">
+          <select id="coin_select" onchange="switchCoin()">
             <option value="KRW-BTC">BTC / KRW</option>
             <option value="KRW-ETH">ETH / KRW</option>
           </select>
@@ -1525,7 +1525,7 @@
         if (page === 'exchange' && !wsStarted) {
           wsStarted = true;
           initChart();
-          connectWS();
+          connectAllCoins();
           loadDaily();
           _startAiPredictAutoRefresh();
         }
@@ -1679,14 +1679,23 @@
       }
 
       // ── 차트/앱 상태 ──
-      let chart, series, socket;
+      let chart, series;
       let openPrice = 0, currentInterval = 1, chartType = 'line';
       let fullHistory = [], buyVol = 0, totalVol = 0, buyCnt = 0;
-      let backfillInProgress = false;
-      let backfillBuffer = [];   // 청크 20개씩 모아 한 번에 병합
-      let totalRecords = 0;      // 서버에서 받은 전체 건수
       let currentCurrency = 'KRW';
       let whaleLogCache = [], logExpanded = false, clickableWhales = [];
+
+      // ── 코인별 독립 상태 (동시 로딩 + 캐시) ──
+      let currentCoin = 'KRW-BTC';
+      const COINS = ['KRW-BTC', 'KRW-ETH'];
+      const coinState = {};
+      COINS.forEach(c => {
+        coinState[c] = {
+          socket: null, reconnectTimer: null, intentionalClose: false,
+          fullHistory: [], backfillBuffer: [], backfillInProgress: false,
+          backfillDone: false, totalRecords: 0, openPrice: 0,
+        };
+      });
 
       function setCurrency(curr) {
         currentCurrency = curr;
@@ -1985,114 +1994,123 @@
         });
       }
 
-      let reconnectTimer = null;
-      let intentionalClose = false;
+      // ── 코인 전환 (WebSocket 재연결 없이 캐시된 데이터 즉시 표시) ──
+      function switchCoin() {
+        const coin = document.getElementById('coin_select').value;
+        currentCoin = coin;
+        const st = coinState[coin];
+        openPrice = st.openPrice || 0;
+        fullHistory = st.fullHistory;
+        dailyData = []; dailyExpanded = false;
+        initChart();
+        refreshUI();
+        loadDaily();
+        loadAiPrediction();
+        _updateBackfillStatus(coin);
+      }
 
-      function reconnectWS() {
-        // intentionalClose를 true로 유지한 채 onclose에서 리셋 — 타이머 오발 방지
-        if (socket && socket.readyState !== WebSocket.CLOSED) {
-          intentionalClose = true;
-          socket.onclose = () => {
-            intentionalClose = false;
-            // 소켓이 완전히 닫힌 후 새 코인 연결 시작
-            fullHistory = [];
-            backfillBuffer = [];
-            backfillInProgress = false;
-            dailyData = [];
-            dailyExpanded = false;
-            initChart();
-            connectWS();
-            loadDaily();
-            loadAiPrediction();
-          };
-          socket.close();
-        } else {
-          fullHistory = [];
-          backfillBuffer = [];
-          backfillInProgress = false;
-          dailyData = [];
-          dailyExpanded = false;
-          initChart();
-          connectWS();
-          loadDaily();
-          loadAiPrediction();
+      function _updateBackfillStatus(coin) {
+        const st = coinState[coin];
+        const el = document.getElementById('backfill_status');
+        if (st.backfillDone || st.fullHistory.length === 0) {
+          el.style.display = 'none';
+        } else if (st.backfillInProgress) {
+          el.style.display = 'block';
+          el.textContent = `📂 ${coin === 'KRW-BTC' ? 'BTC' : 'ETH'} 과거 데이터 로딩 중...`;
         }
       }
 
-      function connectWS() {
-        if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
-        const coin = document.getElementById('coin_select').value;
-        document.getElementById('conn_status').textContent = '연결 중...';
-        socket = new WebSocket(`${WS_BASE}/ws/${coin}`);
-        socket.onopen = () => {
-          document.getElementById('conn_status').textContent = '실시간 연결 중';
+      // ── 모든 코인 동시 연결 ──
+      function connectAllCoins() {
+        COINS.forEach(coin => connectCoin(coin));
+      }
+
+      function connectCoin(coin) {
+        const st = coinState[coin];
+        if (st.reconnectTimer) { clearTimeout(st.reconnectTimer); st.reconnectTimer = null; }
+        if (coin === currentCoin) document.getElementById('conn_status').textContent = '연결 중...';
+
+        const ws = new WebSocket(`${WS_BASE}/ws/${coin}`);
+        st.socket = ws;
+
+        ws.onopen = () => {
+          if (coin === currentCoin) document.getElementById('conn_status').textContent = '실시간 연결 중';
         };
-        socket.onmessage = e => {
+
+        ws.onmessage = e => {
           const res = JSON.parse(e.data);
           if (res.type === 'heartbeat') return;
-          if (res.open_price) openPrice = res.open_price;
+          if (res.open_price) {
+            st.openPrice = res.open_price;
+            if (coin === currentCoin) openPrice = st.openPrice;
+          }
+
           if (res.type === 'history') {
-            // 새 연결: 버퍼·플래그 초기화
-            backfillInProgress = false;
-            backfillBuffer = [];
-            totalRecords = res.total_records || 0;
-            fullHistory = res.data;
-            refreshUI();
+            st.backfillInProgress = false;
+            st.backfillBuffer = [];
+            st.backfillDone = false;
+            st.totalRecords = res.total_records || 0;
+            st.fullHistory = res.data;
+            if (coin === currentCoin) { fullHistory = st.fullHistory; refreshUI(); }
+
           } else if (res.type === 'history_prepend') {
-            backfillInProgress = true;
-            // 청크를 버퍼에 쌓고, 20개마다 한 번에 fullHistory에 병합 후 차트 갱신
-            backfillBuffer.push(res.data);
-            if (backfillBuffer.length >= 20) {
-              const merged = backfillBuffer.flat().reverse(); // DESC → ASC
-              backfillBuffer = [];
-              fullHistory = merged.concat(fullHistory);
-              refreshChartOnly(); // 차트 선만 갱신 (고래 로그·정렬 생략)
+            st.backfillInProgress = true;
+            st.backfillBuffer.push(res.data);
+            // 20청크마다 병합 후 차트 갱신
+            if (st.backfillBuffer.length >= 20) {
+              const merged = st.backfillBuffer.flat().reverse();
+              st.backfillBuffer = [];
+              st.fullHistory = merged.concat(st.fullHistory);
+              if (coin === currentCoin) { fullHistory = st.fullHistory; refreshChartOnly(); }
             }
-            // 진행률 표시
-            const el = document.getElementById('backfill_status');
-            el.style.display = 'block';
-            const sentMan  = (res.total_sent / 10000).toFixed(0);
-            const totalMan = totalRecords > 0 ? (totalRecords / 10000).toFixed(0) : '?';
-            const pct      = totalRecords > 0
-              ? Math.min(100, Math.round(res.total_sent / totalRecords * 100))
-              : 0;
-            el.textContent = `📂 과거 데이터 로딩 중... ${sentMan}만 / ${totalMan}만건 (${pct}%)`;
+            // 현재 보고있는 코인이면 진행률 표시
+            if (coin === currentCoin) {
+              const el = document.getElementById('backfill_status');
+              el.style.display = 'block';
+              const sentMan  = (res.total_sent / 10000).toFixed(0);
+              const totalMan = st.totalRecords > 0 ? (st.totalRecords / 10000).toFixed(0) : '?';
+              const pct      = st.totalRecords > 0
+                ? Math.min(100, Math.round(res.total_sent / st.totalRecords * 100)) : 0;
+              el.textContent = `📂 과거 데이터 로딩 중... ${sentMan}만 / ${totalMan}만건 (${pct}%)`;
+            }
+
           } else if (res.type === 'backfill_done') {
-            backfillInProgress = false;
-            // 남은 버퍼 마저 병합
-            if (backfillBuffer.length > 0) {
-              const merged = backfillBuffer.flat().reverse();
-              backfillBuffer = [];
-              fullHistory = merged.concat(fullHistory);
+            st.backfillInProgress = false;
+            st.backfillDone = true;
+            if (st.backfillBuffer.length > 0) {
+              const merged = st.backfillBuffer.flat().reverse();
+              st.backfillBuffer = [];
+              st.fullHistory = merged.concat(st.fullHistory);
             }
-            refreshUI(); // 완료 후 고래 로그 포함 전체 갱신
-            const el = document.getElementById('backfill_status');
-            if (res.total === 0) {
-              el.style.display = 'none';
-            } else {
+            if (coin === currentCoin) {
+              fullHistory = st.fullHistory;
+              refreshUI();
+              const el = document.getElementById('backfill_status');
               const totalMan = (res.total / 10000).toFixed(0);
               el.textContent = `✅ 과거 데이터 로딩 완료 (${totalMan}만건)`;
               setTimeout(() => { el.style.display = 'none'; }, 3000);
             }
+
           } else if (res.type === 'tick') {
-            fullHistory.push(res);
-            if (fullHistory.length > 5000) fullHistory.shift();
-            const th = parseFloat(document.getElementById('threshold').value) * 1e8;
-            if (res.amount >= th) showToast(res.side, res.amount, res.price);
-            updateMetrics(res.price);
-            // 백필 중에는 차트 갱신 생략 (이벤트 루프 블로킹 방지)
-            if (!backfillInProgress) refreshUI();
+            st.fullHistory.push(res);
+            if (coin === currentCoin) {
+              fullHistory = st.fullHistory;
+              const th = parseFloat(document.getElementById('threshold').value) * 1e8;
+              if (res.amount >= th) showToast(res.side, res.amount, res.price);
+              updateMetrics(res.price);
+              if (!st.backfillInProgress) refreshUI();
+            }
           }
         };
-        socket.onclose = () => {
-          const wasIntentional = intentionalClose;
-          intentionalClose = false;
-          if (!wasIntentional) {
+
+        ws.onclose = () => {
+          if (coin === currentCoin && !st.intentionalClose)
             document.getElementById('conn_status').textContent = '재연결 중...';
-            reconnectTimer = setTimeout(() => connectWS(), 3000);
-          }
+          if (!st.intentionalClose)
+            st.reconnectTimer = setTimeout(() => connectCoin(coin), 3000);
+          st.intentionalClose = false;
         };
-        socket.onerror = () => { socket.close(); };
+        ws.onerror = () => { ws.close(); };
       }
 
       window.onresize = () => {
