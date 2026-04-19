@@ -151,11 +151,9 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
     conn = None # 자원 해제를 위해 미리 선언
     
     try:
-        # [최적화] 기준가 fetch와 DB 히스토리 조회를 비동기 병렬 실행
-        open_price, last_update_date = await asyncio.gather(
-            asyncio.to_thread(get_official_open_price, coin),
-            asyncio.to_thread(lambda: datetime.now(timezone(timedelta(hours=9))).date()),
-        )
+        # 기준가 및 날짜 설정
+        open_price = get_official_open_price(coin)
+        last_update_date = datetime.now(timezone(timedelta(hours=9))).date()
 
         # [최적화] 전체 조회(163만행·11초) → 최근 24시간만 조회(~0.7초)
         conn = psycopg2.connect(**DB_CONFIG); cur = conn.cursor()
