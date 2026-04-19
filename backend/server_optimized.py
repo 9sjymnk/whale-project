@@ -155,42 +155,57 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
         open_price = get_official_open_price(coin)
         last_update_date = datetime.now(timezone(timedelta(hours=9))).date()
 
-        # [최적화] 전체 조회(163만행·11초) → 최근 2000건만 조회(즉시)
+        # ── Phase 1: 최근 500건만 즉시 전송 → 연결 완료 + 차트 즉시 표시 ──
         conn = psycopg2.connect(**DB_CONFIG); cur = conn.cursor()
         cur.execute("""
             SELECT price, total_amount, side, timestamp, id
             FROM (
                 SELECT price, total_amount, side, timestamp, id
-                FROM trades
-                WHERE code = %s
-                ORDER BY timestamp DESC, id DESC
-                LIMIT 2000
-            ) sub
-            ORDER BY timestamp ASC, id ASC
+                FROM trades WHERE code = %s
+                ORDER BY timestamp DESC, id DESC LIMIT 500
+            ) sub ORDER BY timestamp ASC, id ASC
         """, (coin,))
-        history = cur.fetchall()
-        
-        history_list = []
-        for h in history:
-            history_list.append({
-                "price": float(h[0]), 
-                "amount": float(h[1]), 
-                "side": h[2], 
-                "time": int(h[3].timestamp()) + 32400, # KST 보정 유지
-                "id": h[4]
-            })
-        
-        # 클라이언트에 초기 데이터 전송
-        await websocket.send_json({"type": "history", "data": history_list, "open_price": open_price})
-        
-        cur.close(); conn.close()
-        conn = None
+        initial_rows = cur.fetchall()
+        cur.close(); conn.close(); conn = None
+
+        oldest_id = initial_rows[0][4] if initial_rows else None
+        initial_list = [{"price": float(h[0]), "amount": float(h[1]), "side": h[2],
+                         "time": int(h[3].timestamp()) + 32400, "id": h[4]} for h in initial_rows]
+
+        await websocket.send_json({"type": "history", "data": initial_list, "open_price": open_price})
+
+        # ── Phase 2: 나머지 24h 데이터를 백그라운드에서 청크로 전송 ──
+        async def backfill():
+            try:
+                conn2 = psycopg2.connect(**DB_CONFIG); cur2 = conn2.cursor()
+                cur2.execute("""
+                    SELECT price, total_amount, side, timestamp, id
+                    FROM trades
+                    WHERE code = %s
+                      AND timestamp >= NOW() - INTERVAL '24 hours'
+                      AND id < %s
+                    ORDER BY timestamp DESC, id DESC
+                """, (coin, oldest_id or 0))
+                rows = cur2.fetchall()
+                cur2.close(); conn2.close()
+
+                CHUNK = 5000
+                for i in range(0, len(rows), CHUNK):
+                    chunk = rows[i:i + CHUNK]
+                    data = [{"price": float(r[0]), "amount": float(r[1]), "side": r[2],
+                             "time": int(r[3].timestamp()) + 32400, "id": r[4]} for r in chunk]
+                    await websocket.send_json({"type": "history_prepend", "data": data})
+                    await asyncio.sleep(0.1)
+            except Exception as e:
+                print(f"Backfill error: {e}")
 
         # 업비트 WebSocket 직접 연결하여 실시간 스트리밍
         upbit_uri = "wss://api.upbit.com/websocket/v1"
         async with websockets.connect(upbit_uri, ping_interval=20, ping_timeout=30) as upbit_ws:
             sub = [{"ticket": "whale-watcher"}, {"type": "trade", "codes": [coin], "isOnlyRealtime": True}, {"format": "SIMPLE"}]
             await upbit_ws.send(json.dumps(sub))
+
+            backfill_task = asyncio.create_task(backfill())
 
             while True:
                 now_kst = datetime.now(timezone(timedelta(hours=9)))
@@ -257,6 +272,10 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
     finally:
         if conn:
             conn.close()
+        try:
+            backfill_task.cancel()
+        except Exception:
+            pass
 
 
 @app.get("/daily/{coin}")

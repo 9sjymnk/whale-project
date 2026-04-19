@@ -1999,6 +1999,10 @@
           if (res.type === 'history') {
             fullHistory = res.data;
             refreshUI();
+          } else if (res.type === 'history_prepend') {
+            // 백그라운드로 채워지는 과거 데이터 — 앞에 붙이고 차트 갱신
+            fullHistory = [...res.data, ...fullHistory];
+            refreshUI();
           } else if (res.type === 'tick') {
             fullHistory.push(res);
             if (fullHistory.length > 5000) fullHistory.shift();
