@@ -1290,6 +1290,11 @@
           <span class="status-dot"></span>
           <span class="status-text" id="conn_status">연결 중...</span>
         </div>
+        <div id="backfill_status" style="
+          font-size:0.72rem; color:var(--accent);
+          padding: 6px 16px 10px;
+          display:none;
+        "></div>
       </div>
 
       <!-- MAIN CONTENT -->
@@ -2000,9 +2005,21 @@
             fullHistory = res.data;
             refreshUI();
           } else if (res.type === 'history_prepend') {
-            // 백그라운드로 채워지는 과거 데이터 — 앞에 붙이고 차트 갱신
             fullHistory = [...res.data, ...fullHistory];
             refreshUI();
+            const pct = Math.round((res.chunk / res.total_chunks) * 100);
+            const loaded = (res.chunk * 5000 > res.total_rows ? res.total_rows : res.chunk * 5000).toLocaleString();
+            document.getElementById('backfill_status').style.display = 'block';
+            document.getElementById('backfill_status').textContent =
+              `📂 과거 데이터 로딩 중... ${pct}% (${loaded} / ${res.total_rows.toLocaleString()}건)`;
+          } else if (res.type === 'backfill_done') {
+            const el = document.getElementById('backfill_status');
+            if (res.total === 0) {
+              el.style.display = 'none';
+            } else {
+              el.textContent = `✅ 과거 데이터 로딩 완료 (${res.total.toLocaleString()}건)`;
+              setTimeout(() => { el.style.display = 'none'; }, 3000);
+            }
           } else if (res.type === 'tick') {
             fullHistory.push(res);
             if (fullHistory.length > 5000) fullHistory.shift();

@@ -178,24 +178,46 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
         async def backfill():
             try:
                 conn2 = psycopg2.connect(**DB_CONFIG); cur2 = conn2.cursor()
-                cur2.execute("""
-                    SELECT price, total_amount, side, timestamp, id
-                    FROM trades
-                    WHERE code = %s
-                      AND timestamp >= NOW() - INTERVAL '24 hours'
-                      AND id < %s
-                    ORDER BY timestamp DESC, id DESC
-                """, (coin, oldest_id or 0))
+                # oldest_id 기준으로 그보다 오래된 24h 데이터만 가져옴
+                if oldest_id:
+                    cur2.execute("""
+                        SELECT price, total_amount, side, timestamp, id
+                        FROM trades
+                        WHERE code = %s
+                          AND timestamp >= NOW() - INTERVAL '24 hours'
+                          AND id < %s
+                        ORDER BY timestamp DESC, id DESC
+                    """, (coin, oldest_id))
+                else:
+                    cur2.execute("""
+                        SELECT price, total_amount, side, timestamp, id
+                        FROM trades
+                        WHERE code = %s AND timestamp >= NOW() - INTERVAL '24 hours'
+                        ORDER BY timestamp DESC, id DESC
+                    """, (coin,))
                 rows = cur2.fetchall()
                 cur2.close(); conn2.close()
 
+                if not rows:
+                    await websocket.send_json({"type": "backfill_done", "total": 0})
+                    return
+
                 CHUNK = 5000
-                for i in range(0, len(rows), CHUNK):
+                total_chunks = (len(rows) + CHUNK - 1) // CHUNK
+                for idx, i in enumerate(range(0, len(rows), CHUNK)):
                     chunk = rows[i:i + CHUNK]
                     data = [{"price": float(r[0]), "amount": float(r[1]), "side": r[2],
                              "time": int(r[3].timestamp()) + 32400, "id": r[4]} for r in chunk]
-                    await websocket.send_json({"type": "history_prepend", "data": data})
-                    await asyncio.sleep(0.1)
+                    await websocket.send_json({
+                        "type": "history_prepend",
+                        "data": data,
+                        "chunk": idx + 1,
+                        "total_chunks": total_chunks,
+                        "total_rows": len(rows),
+                    })
+                    await asyncio.sleep(0.05)
+
+                await websocket.send_json({"type": "backfill_done", "total": len(rows)})
             except Exception as e:
                 print(f"Backfill error: {e}")
 
