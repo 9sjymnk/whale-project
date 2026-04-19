@@ -1683,7 +1683,7 @@
       let openPrice = 0, currentInterval = 1, chartType = 'line';
       let fullHistory = [], buyVol = 0, totalVol = 0, buyCnt = 0;
       let backfillInProgress = false;
-      let backfillChunks = [];   // 백필 청크 임시 버퍼 (완료 시 한번에 병합)
+      let backfillBuffer = [];   // 청크 20개씩 모아 한 번에 병합
       let totalRecords = 0;      // 서버에서 받은 전체 건수
       let currentCurrency = 'KRW';
       let whaleLogCache = [], logExpanded = false, clickableWhales = [];
@@ -1780,6 +1780,13 @@
             .sort((a, b) => a[0] - b[0])
             .map(([t, p]) => ({ time: t, value: currentCurrency === 'USD' ? p / exchangeRate : p }));
         }
+      }
+
+      // 백필 중 중간 갱신: 차트 선만 업데이트 (고래 로그·정렬 등 무거운 DOM 작업 생략)
+      function refreshChartOnly() {
+        if (!fullHistory.length) return;
+        series.setData(buildChartData());
+        updateMetrics(fullHistory[fullHistory.length - 1].price);
       }
 
       function refreshUI() {
@@ -1984,7 +1991,7 @@
       function reconnectWS() {
         if (socket) { intentionalClose = true; socket.close(); intentionalClose = false; }
         fullHistory = [];
-        backfillChunks = [];
+        backfillBuffer = [];
         backfillInProgress = false;
         dailyData = [];
         dailyExpanded = false;
@@ -2009,15 +2016,21 @@
           if (res.type === 'history') {
             // 새 연결: 버퍼·플래그 초기화
             backfillInProgress = false;
-            backfillChunks = [];
+            backfillBuffer = [];
             totalRecords = res.total_records || 0;
             fullHistory = res.data;
             refreshUI();
           } else if (res.type === 'history_prepend') {
-            // ── 핵심 최적화: 청크를 버퍼에만 누적, fullHistory는 건드리지 않음 ──
-            // 이렇게 하면 O(n²) 배열 복사가 없고, 백필 중 차트 재렌더도 없음
             backfillInProgress = true;
-            backfillChunks.push(res.data);
+            // 청크를 버퍼에 쌓고, 20개마다 한 번에 fullHistory에 병합 후 차트 갱신
+            backfillBuffer.push(res.data);
+            if (backfillBuffer.length >= 20) {
+              const merged = backfillBuffer.flat().reverse(); // DESC → ASC
+              backfillBuffer = [];
+              fullHistory = merged.concat(fullHistory);
+              refreshChartOnly(); // 차트 선만 갱신 (고래 로그·정렬 생략)
+            }
+            // 진행률 표시
             const el = document.getElementById('backfill_status');
             el.style.display = 'block';
             const sentMan  = (res.total_sent / 10000).toFixed(0);
@@ -2028,14 +2041,13 @@
             el.textContent = `📂 과거 데이터 로딩 중... ${sentMan}만 / ${totalMan}만건 (${pct}%)`;
           } else if (res.type === 'backfill_done') {
             backfillInProgress = false;
-            // 버퍼에 쌓인 청크를 한 번에 병합 (각 청크는 id DESC → 역순 후 prepend)
-            if (backfillChunks.length > 0) {
-              const allBackfill = backfillChunks.flat();
-              allBackfill.reverse();  // DESC → ASC 순서로 변환
-              fullHistory = allBackfill.concat(fullHistory);
-              backfillChunks = [];
+            // 남은 버퍼 마저 병합
+            if (backfillBuffer.length > 0) {
+              const merged = backfillBuffer.flat().reverse();
+              backfillBuffer = [];
+              fullHistory = merged.concat(fullHistory);
             }
-            refreshUI();
+            refreshUI(); // 완료 후 고래 로그 포함 전체 갱신
             const el = document.getElementById('backfill_status');
             if (res.total === 0) {
               el.style.display = 'none';
@@ -2050,7 +2062,7 @@
             const th = parseFloat(document.getElementById('threshold').value) * 1e8;
             if (res.amount >= th) showToast(res.side, res.amount, res.price);
             updateMetrics(res.price);
-            // 백필 중에는 차트 갱신 생략 (수백만 행 순회로 브라우저 블로킹 방지)
+            // 백필 중에는 차트 갱신 생략 (이벤트 루프 블로킹 방지)
             if (!backfillInProgress) refreshUI();
           }
         };
