@@ -58,9 +58,9 @@ python train_model.py
 cd backend
 uvicorn server:app --port 8000
 
-# 터미널 2 — 최적화 버전 (포트 8001)
+# 터미널 2 — 최적화 버전 (포트 8081)
 cd backend
-uvicorn server_optimized:app --port 8001
+uvicorn server_optimized:app --port 8081
 ```
 
 브라우저 탭 2개를 열어 나란히 비교합니다.
@@ -68,7 +68,7 @@ uvicorn server_optimized:app --port 8001
 | 탭 | URL | 버전 |
 |---|---|---|
 | 탭 1 | `frontend/index.html` | 기존 (포트 8000) |
-| 탭 2 | `frontend/index.html?port=8001` | 최적화 (포트 8001) |
+| 탭 2 | `frontend/index_optimized.html` | 최적화 (포트 8081) |
 
 **비교 수치**
 

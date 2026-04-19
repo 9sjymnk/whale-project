@@ -157,6 +157,11 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
 
         # ── Phase 1: 최근 500건만 즉시 전송 → 연결 완료 + 차트 즉시 표시 ──
         conn = psycopg2.connect(**DB_CONFIG); cur = conn.cursor()
+
+        # 전체 건수 (프론트 진행률 표시용)
+        cur.execute("SELECT COUNT(*) FROM trades WHERE code = %s", (coin,))
+        total_records = cur.fetchone()[0]
+
         cur.execute("""
             SELECT price, total_amount, side, timestamp, id
             FROM (
@@ -172,49 +177,61 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
         initial_list = [{"price": float(h[0]), "amount": float(h[1]), "side": h[2],
                          "time": int(h[3].timestamp()) + 32400, "id": h[4]} for h in initial_rows]
 
-        await websocket.send_json({"type": "history", "data": initial_list, "open_price": open_price})
+        await websocket.send_json({
+            "type": "history",
+            "data": initial_list,
+            "open_price": open_price,
+            "total_records": total_records,
+        })
 
-        # ── Phase 2: 나머지 24h 데이터를 백그라운드에서 청크로 전송 ──
+        # ── Phase 2: 나머지 전체 데이터를 ID 기반 페이지네이션으로 백그라운드 전송 ──
         async def backfill():
             try:
                 CHUNK = 5000
+                total_sent  = 0
+                chunk_idx   = 0
+                current_max_id = oldest_id  # 이미 전송한 최소 id; 그보다 이전 데이터를 역순으로 가져옴
+
                 conn2 = psycopg2.connect(**DB_CONFIG)
-                # 서버사이드 커서: 전체를 메모리에 올리지 않고 CHUNK씩 DB에서 가져옴
-                cur2 = conn2.cursor('backfill_cur')
-                cur2.itersize = CHUNK
-                if oldest_id:
-                    cur2.execute("""
-                        SELECT price, total_amount, side, timestamp, id
-                        FROM trades
-                        WHERE code = %s AND id < %s
-                        ORDER BY timestamp DESC, id DESC
-                    """, (coin, oldest_id))
-                else:
-                    cur2.execute("""
-                        SELECT price, total_amount, side, timestamp, id
-                        FROM trades WHERE code = %s
-                        ORDER BY timestamp DESC, id DESC
-                    """, (coin,))
+                cur2  = conn2.cursor()
+                try:
+                    while True:
+                        if current_max_id is not None:
+                            cur2.execute("""
+                                SELECT price, total_amount, side, timestamp, id
+                                FROM trades
+                                WHERE code = %s AND id < %s
+                                ORDER BY id DESC
+                                LIMIT %s
+                            """, (coin, current_max_id, CHUNK))
+                        else:
+                            cur2.execute("""
+                                SELECT price, total_amount, side, timestamp, id
+                                FROM trades
+                                WHERE code = %s
+                                ORDER BY id DESC
+                                LIMIT %s
+                            """, (coin, CHUNK))
 
-                total_sent = 0
-                chunk_idx  = 0
-                while True:
-                    rows = cur2.fetchmany(CHUNK)
-                    if not rows:
-                        break
-                    data = [{"price": float(r[0]), "amount": float(r[1]), "side": r[2],
-                             "time": int(r[3].timestamp()) + 32400, "id": r[4]} for r in rows]
-                    total_sent += len(rows)
-                    chunk_idx  += 1
-                    await websocket.send_json({
-                        "type": "history_prepend",
-                        "data": data,
-                        "chunk": chunk_idx,
-                        "total_sent": total_sent,
-                    })
-                    await asyncio.sleep(0.05)
+                        rows = cur2.fetchall()
+                        if not rows:
+                            break
 
-                cur2.close(); conn2.close()
+                        data = [{"price": float(r[0]), "amount": float(r[1]), "side": r[2],
+                                 "time": int(r[3].timestamp()) + 32400, "id": r[4]} for r in rows]
+                        current_max_id = rows[-1][4]  # 청크에서 가장 작은 id
+                        total_sent += len(rows)
+                        chunk_idx  += 1
+                        await websocket.send_json({
+                            "type": "history_prepend",
+                            "data": data,
+                            "chunk": chunk_idx,
+                            "total_sent": total_sent,
+                        })
+                        await asyncio.sleep(0.05)
+                finally:
+                    cur2.close(); conn2.close()
+
                 await websocket.send_json({"type": "backfill_done", "total": total_sent})
             except Exception as e:
                 print(f"Backfill error: {e}")

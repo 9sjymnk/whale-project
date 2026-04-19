@@ -1682,6 +1682,9 @@
       let chart, series, socket;
       let openPrice = 0, currentInterval = 1, chartType = 'line';
       let fullHistory = [], buyVol = 0, totalVol = 0, buyCnt = 0;
+      let backfillInProgress = false;
+      let backfillChunks = [];   // 백필 청크 임시 버퍼 (완료 시 한번에 병합)
+      let totalRecords = 0;      // 서버에서 받은 전체 건수
       let currentCurrency = 'KRW';
       let whaleLogCache = [], logExpanded = false, clickableWhales = [];
 
@@ -1981,6 +1984,8 @@
       function reconnectWS() {
         if (socket) { intentionalClose = true; socket.close(); intentionalClose = false; }
         fullHistory = [];
+        backfillChunks = [];
+        backfillInProgress = false;
         dailyData = [];
         dailyExpanded = false;
         initChart();
@@ -2002,22 +2007,41 @@
           if (res.type === 'heartbeat') return;
           if (res.open_price) openPrice = res.open_price;
           if (res.type === 'history') {
+            // 새 연결: 버퍼·플래그 초기화
+            backfillInProgress = false;
+            backfillChunks = [];
+            totalRecords = res.total_records || 0;
             fullHistory = res.data;
             refreshUI();
           } else if (res.type === 'history_prepend') {
-            fullHistory = [...res.data, ...fullHistory];
-            // 10청크마다 1번만 차트 갱신 (매번 갱신하면 수백만 행 반복으로 브라우저 프리징)
-            if (res.chunk % 10 === 0) refreshUI();
-            document.getElementById('backfill_status').style.display = 'block';
-            document.getElementById('backfill_status').textContent =
-              `📂 과거 데이터 로딩 중... ${res.total_sent.toLocaleString()}건`;
+            // ── 핵심 최적화: 청크를 버퍼에만 누적, fullHistory는 건드리지 않음 ──
+            // 이렇게 하면 O(n²) 배열 복사가 없고, 백필 중 차트 재렌더도 없음
+            backfillInProgress = true;
+            backfillChunks.push(res.data);
+            const el = document.getElementById('backfill_status');
+            el.style.display = 'block';
+            const sentMan  = (res.total_sent / 10000).toFixed(0);
+            const totalMan = totalRecords > 0 ? (totalRecords / 10000).toFixed(0) : '?';
+            const pct      = totalRecords > 0
+              ? Math.min(100, Math.round(res.total_sent / totalRecords * 100))
+              : 0;
+            el.textContent = `📂 과거 데이터 로딩 중... ${sentMan}만 / ${totalMan}만건 (${pct}%)`;
           } else if (res.type === 'backfill_done') {
+            backfillInProgress = false;
+            // 버퍼에 쌓인 청크를 한 번에 병합 (각 청크는 id DESC → 역순 후 prepend)
+            if (backfillChunks.length > 0) {
+              const allBackfill = backfillChunks.flat();
+              allBackfill.reverse();  // DESC → ASC 순서로 변환
+              fullHistory = allBackfill.concat(fullHistory);
+              backfillChunks = [];
+            }
             refreshUI();
             const el = document.getElementById('backfill_status');
             if (res.total === 0) {
               el.style.display = 'none';
             } else {
-              el.textContent = `✅ 과거 데이터 로딩 완료 (${res.total.toLocaleString()}건)`;
+              const totalMan = (res.total / 10000).toFixed(0);
+              el.textContent = `✅ 과거 데이터 로딩 완료 (${totalMan}만건)`;
               setTimeout(() => { el.style.display = 'none'; }, 3000);
             }
           } else if (res.type === 'tick') {
@@ -2026,7 +2050,8 @@
             const th = parseFloat(document.getElementById('threshold').value) * 1e8;
             if (res.amount >= th) showToast(res.side, res.amount, res.price);
             updateMetrics(res.price);
-            refreshUI();
+            // 백필 중에는 차트 갱신 생략 (수백만 행 순회로 브라우저 블로킹 방지)
+            if (!backfillInProgress) refreshUI();
           }
         };
         socket.onclose = () => {
