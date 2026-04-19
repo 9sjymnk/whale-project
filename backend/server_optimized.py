@@ -183,16 +183,14 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
                     cur2.execute("""
                         SELECT price, total_amount, side, timestamp, id
                         FROM trades
-                        WHERE code = %s
-                          AND timestamp >= NOW() - INTERVAL '24 hours'
-                          AND id < %s
+                        WHERE code = %s AND id < %s
                         ORDER BY timestamp DESC, id DESC
                     """, (coin, oldest_id))
                 else:
                     cur2.execute("""
                         SELECT price, total_amount, side, timestamp, id
                         FROM trades
-                        WHERE code = %s AND timestamp >= NOW() - INTERVAL '24 hours'
+                        WHERE code = %s
                         ORDER BY timestamp DESC, id DESC
                     """, (coin,))
                 rows = cur2.fetchall()
