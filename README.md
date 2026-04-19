@@ -19,15 +19,64 @@
 
 ## 💻 실행 방법 (How to Run)
 
-### 1. 백엔드 서버 실행
-
-먼저 필요한 라이브러리를 설치한 후 서버를 구동합니다.
+### 1. 의존성 설치
 
 ```bash
-pip install fastapi uvicorn psycopg2 requests
+pip install fastapi uvicorn psycopg2 requests python-jose bcrypt python-dotenv xgboost scikit-learn numpy pandas
+```
+
+### 2. 백엔드 서버 실행
+
+```bash
 cd backend
 uvicorn server:app --reload --host 0.0.0.0 --port 8000
 ```
+
+### 3. AI 예측 모델 학습 (최초 1회)
+
+```bash
+# 특성 데이터 생성 (DB → data/features.csv)
+cd analyzer
+python feature_engineering.py
+
+# 모델 학습 및 저장 (models/model.pkl)
+python train_model.py
+```
+
+### 4. 프론트엔드 실행
+
+`frontend/index.html` 파일을 브라우저에서 열거나 라이브 서버로 실행합니다.
+
+---
+
+## 🎬 데모 비교 실행 (연결 속도 최적화 전/후)
+
+터미널 2개를 열어 기존 버전과 최적화 버전을 동시에 실행합니다.
+
+```bash
+# 터미널 1 — 기존 버전 (포트 8000)
+cd backend
+uvicorn server:app --port 8000
+
+# 터미널 2 — 최적화 버전 (포트 8001)
+cd backend
+uvicorn server_optimized:app --port 8001
+```
+
+브라우저 탭 2개를 열어 나란히 비교합니다.
+
+| 탭 | URL | 버전 |
+|---|---|---|
+| 탭 1 | `frontend/index.html` | 기존 (포트 8000) |
+| 탭 2 | `frontend/index.html?port=8001` | 최적화 (포트 8001) |
+
+**비교 수치**
+
+| 항목 | 기존 | 최적화 |
+|---|---|---|
+| 조회 행수 | 163만 행 (전체) | 11만 행 (최근 24h) |
+| 초기 연결 대기 | 약 8초 | 약 0.7초 |
+| 개선 방법 | — | 24h 범위 제한 + `(code, timestamp)` 복합 인덱스 |
 
 ---
 

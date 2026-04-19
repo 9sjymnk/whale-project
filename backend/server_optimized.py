@@ -1,4 +1,4 @@
-# backend/server.py
+# backend/server_optimized.py  ← 데모용 최적화 버전 (포트 8001)
 from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer
@@ -151,13 +151,21 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
     conn = None # 자원 해제를 위해 미리 선언
     
     try:
-        # [기존 기능 유지] 초기 기준가 및 날짜 설정
-        open_price = get_official_open_price(coin)
-        last_update_date = datetime.now(timezone(timedelta(hours=9))).date()
+        # [최적화] 기준가 fetch와 DB 히스토리 조회를 비동기 병렬 실행
+        open_price, last_update_date = await asyncio.gather(
+            asyncio.to_thread(get_official_open_price, coin),
+            asyncio.to_thread(lambda: datetime.now(timezone(timedelta(hours=9))).date()),
+        )
 
-        # [기존 기능 유지] 초기 히스토리 데이터 로드
+        # [최적화] 전체 조회(163만행·11초) → 최근 24시간만 조회(~0.7초)
         conn = psycopg2.connect(**DB_CONFIG); cur = conn.cursor()
-        cur.execute(f"SELECT price, total_amount, side, timestamp, id FROM trades WHERE code='{coin}' ORDER BY timestamp ASC, id ASC")
+        cur.execute("""
+            SELECT price, total_amount, side, timestamp, id
+            FROM trades
+            WHERE code = %s
+              AND timestamp >= NOW() - INTERVAL '24 hours'
+            ORDER BY timestamp ASC, id ASC
+        """, (coin,))
         history = cur.fetchall()
         
         history_list = []

@@ -1010,6 +1010,124 @@
         padding: 6px 28px 6px 10px;
         margin-left: auto;
       }
+
+      /* ── AI 예측 패널 ── */
+      .ai-predict-section {
+        margin-bottom: 32px;
+      }
+      .ai-predict-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--border);
+      }
+      .ai-predict-header h3 {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .ai-predict-meta {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .ai-refresh-btn {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+        padding: 4px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-family: inherit;
+        transition: all 0.15s;
+      }
+      .ai-refresh-btn:hover { color: var(--text); border-color: var(--accent); }
+      .ai-predict-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0;
+        padding: 20px 20px 24px;
+      }
+      .ai-predict-card {
+        text-align: center;
+        padding: 16px 8px;
+        border-right: 1px solid var(--border);
+      }
+      .ai-predict-card:last-child { border-right: none; }
+      .ai-tf-label {
+        font-size: 0.68rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 1.2px;
+        margin-bottom: 10px;
+        font-weight: 600;
+      }
+      .ai-direction {
+        font-size: 1.6rem;
+        font-weight: 700;
+        font-family: 'JetBrains Mono', monospace;
+        margin-bottom: 4px;
+        line-height: 1;
+      }
+      .ai-direction.up   { color: var(--whale-buy); }
+      .ai-direction.down { color: var(--up); }
+      .ai-direction.neutral { color: var(--text-secondary); }
+      .ai-arrow {
+        font-size: 1.1rem;
+        margin-right: 4px;
+      }
+      .ai-confidence {
+        font-size: 0.82rem;
+        font-family: 'JetBrains Mono', monospace;
+        color: var(--text);
+        margin-bottom: 6px;
+      }
+      .ai-level-badge {
+        display: inline-block;
+        font-size: 0.62rem;
+        font-weight: 700;
+        letter-spacing: 1px;
+        padding: 2px 8px;
+        border-radius: 4px;
+      }
+      .ai-level-badge.high { background: rgba(0,255,65,0.15); color: #00ff41; }
+      .ai-level-badge.med  { background: rgba(240,185,11,0.15); color: var(--accent); }
+      .ai-level-badge.low  { background: rgba(132,142,156,0.15); color: var(--text-secondary); }
+      .ai-predict-empty {
+        padding: 40px;
+        text-align: center;
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+      }
+      .ai-predict-loading {
+        padding: 32px;
+        text-align: center;
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+      }
+      /* ⓘ 아이콘 */
+      .ai-info-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        border: 1px solid var(--text-secondary);
+        color: var(--text-secondary);
+        font-size: 0.6rem;
+        font-weight: 700;
+        cursor: pointer;
+        vertical-align: middle;
+        margin-left: 5px;
+        transition: border-color 0.15s, color 0.15s;
+        user-select: none;
+      }
+      .ai-info-icon:hover { border-color: var(--accent); color: var(--accent); }
     </style>
   </head>
   <body>
@@ -1215,6 +1333,24 @@
           <div id="chart_tooltip"></div>
         </div>
 
+        <!-- Backlog 13: AI 가격 방향 예측 -->
+        <div class="log-section ai-predict-section" style="margin-bottom:18px;">
+          <div class="ai-predict-header">
+            <h3>🤖 AI 가격 방향 예측
+              <span class="ai-info-icon" id="ai_info_btn"
+                onmouseenter="showAiTooltip(event)"
+                onmouseleave="hideAiTooltip()">ⓘ</span>
+            </h3>
+            <div class="ai-predict-meta">
+              <span id="ai_predict_updated"></span>
+              <button class="ai-refresh-btn" onclick="loadAiPrediction()">새로고침</button>
+            </div>
+          </div>
+          <div id="ai_predict_body">
+            <div class="ai-predict-loading">예측 데이터 로딩 중...</div>
+          </div>
+        </div>
+
         <!-- 일별 시세 -->
         <div class="log-section" style="margin-bottom:18px;">
           <div class="log-header">
@@ -1333,6 +1469,7 @@
         </table>
         <button id="whale_log_more_btn" class="show-more-btn" onclick="toggleWhaleLog()" style="display:none;">더보기</button>
       </div>
+
     </div>
 
     <!-- ── AUTH MODAL ── -->
@@ -1367,7 +1504,10 @@
     </div>
 
     <script>
-      const API_BASE = 'http://localhost:8000';
+      // ?port=8001 로 열면 최적화 서버에 연결 (데모용)
+      const _port   = new URLSearchParams(location.search).get('port') || '8000';
+      const API_BASE = `http://localhost:${_port}`;
+      const WS_BASE  = `ws://localhost:${_port}`;
 
       // ── 페이지 전환 ──
       let wsStarted = false;
@@ -1384,6 +1524,7 @@
           initChart();
           connectWS();
           loadDaily();
+          _startAiPredictAutoRefresh();
         }
         if (page === 'whale' && !whaleAnalysisLoaded) {
           whaleAnalysisLoaded = true;
@@ -1660,10 +1801,10 @@
         if (logExpanded) {
           whaleLogCache.forEach(d => { clickableWhales.push(d); addLogRow(d, clickableWhales.length - 1); });
           toggleBtn.innerText = '간략히보기';
-          toggleBtn.style.display = whaleLogCache.length > 10 ? 'block' : 'none';
+          toggleBtn.style.display = whaleLogCache.length > 5 ? 'block' : 'none';
         } else {
-          whaleLogCache.slice(0, 10).forEach(d => { clickableWhales.push(d); addLogRow(d, clickableWhales.length - 1); });
-          const remaining = whaleLogCache.length - 10;
+          whaleLogCache.slice(0, 5).forEach(d => { clickableWhales.push(d); addLogRow(d, clickableWhales.length - 1); });
+          const remaining = whaleLogCache.length - 5;
           if (remaining > 0) { toggleBtn.innerText = `더보기 (${remaining}건 더)`; toggleBtn.style.display = 'block'; }
           else { toggleBtn.style.display = 'none'; }
         }
@@ -1700,8 +1841,8 @@
           whaleLogCache.forEach(d => { clickableWhales.push(d); addLogRow(d, clickableWhales.length - 1); });
           toggleBtn.innerText = '간략히보기';
         } else {
-          whaleLogCache.slice(0, 10).forEach(d => { clickableWhales.push(d); addLogRow(d, clickableWhales.length - 1); });
-          toggleBtn.innerText = `더보기 (${whaleLogCache.length - 10}건 더)`;
+          whaleLogCache.slice(0, 5).forEach(d => { clickableWhales.push(d); addLogRow(d, clickableWhales.length - 1); });
+          toggleBtn.innerText = `더보기 (${whaleLogCache.length - 5}건 더)`;
         }
       }
 
@@ -1842,13 +1983,14 @@
         initChart();
         connectWS();
         loadDaily();
+        loadAiPrediction();
       }
 
       function connectWS() {
         if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
         const coin = document.getElementById('coin_select').value;
         document.getElementById('conn_status').textContent = '연결 중...';
-        socket = new WebSocket(`ws://localhost:8000/ws/${coin}`);
+        socket = new WebSocket(`${WS_BASE}/ws/${coin}`);
         socket.onopen = () => {
           document.getElementById('conn_status').textContent = '실시간 연결 중';
         };
@@ -1898,7 +2040,7 @@
         const body = document.getElementById('daily_body');
         const btn = document.getElementById('daily_toggle_btn');
         body.innerHTML = '';
-        const rows = dailyExpanded ? dailyData : dailyData.slice(0, 10);
+        const rows = dailyExpanded ? dailyData : dailyData.slice(0, 5);
         rows.forEach(d => {
           const isUp = d.change_pct >= 0;
           const color = isUp ? 'var(--up)' : 'var(--down)';
@@ -1929,8 +2071,8 @@
               <td>${volFmt}</td>
             </tr>`);
         });
-        if (dailyData.length > 10) {
-          const remaining = dailyData.length - 10;
+        if (dailyData.length > 5) {
+          const remaining = dailyData.length - 5;
           btn.style.display = 'block';
           btn.textContent = dailyExpanded ? '간략히보기' : `더보기 (${remaining}일 더)`;
         } else {
@@ -2099,7 +2241,7 @@
       }
 
       function _renderWhaleLogRows() {
-        const rows = whaleLogExpanded ? whaleLogFull : whaleLogFull.slice(0, 10);
+        const rows = whaleLogExpanded ? whaleLogFull : whaleLogFull.slice(0, 5);
         document.getElementById('whale_log_body').innerHTML = rows.map(d => {
           const dateObj = new Date((d.time - 32400) * 1000);
           const timeStr = `${(dateObj.getMonth()+1).toString().padStart(2,'0')}.${dateObj.getDate().toString().padStart(2,'0')} ${dateObj.toLocaleTimeString('ko-KR',{hour12:false})}`;
@@ -2113,11 +2255,11 @@
           </tr>`;
         }).join('');
         const btn = document.getElementById('whale_log_more_btn');
-        if (whaleLogFull.length > 10) {
+        if (whaleLogFull.length > 5) {
           btn.style.display = 'block';
           btn.textContent = whaleLogExpanded
             ? '간략히보기'
-            : `더보기 (${whaleLogFull.length - 10}건 더)`;
+            : `더보기 (${whaleLogFull.length - 5}건 더)`;
         } else {
           btn.style.display = 'none';
         }
@@ -2128,9 +2270,104 @@
         _renderWhaleLogRows();
       }
 
+      // ── AI 예측 ──
+      let aiPredictTimer = null;
+
+      async function loadAiPrediction() {
+        const coin = document.getElementById('coin_select').value;
+        const body = document.getElementById('ai_predict_body');
+        body.innerHTML = '<div class="ai-predict-loading">예측 중...</div>';
+        try {
+          const res = await fetch(`${API_BASE}/predict/price-after-whale?coin=${coin}`);
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            body.innerHTML = `<div class="ai-predict-empty">${err.detail || '예측 실패 — 모델 파일을 먼저 학습해주세요.'}</div>`;
+            return;
+          }
+          const data = await res.json();
+          renderAiPrediction(data);
+          document.getElementById('ai_predict_updated').textContent =
+            '업데이트: ' + new Date().toLocaleTimeString('ko-KR', { hour12: false });
+        } catch (e) {
+          body.innerHTML = '<div class="ai-predict-empty">서버 연결 실패</div>';
+        }
+      }
+
+      function renderAiPrediction(data) {
+        const labels = { '1m': '1분 후', '5m': '5분 후', '30m': '30분 후' };
+        const html = `<div class="ai-predict-grid">` +
+          ['1m', '5m', '30m'].map(tf => {
+            const d       = data[tf];
+            const isUp    = d.direction === 'UP';
+            const dirCls  = isUp ? 'up' : 'down';
+            const arrow   = isUp ? '▲' : '▼';
+            const dirText = isUp ? '상승' : '하락';
+            const lvlCls  = d.level.toLowerCase();
+            return `
+              <div class="ai-predict-card">
+                <div class="ai-tf-label">${labels[tf]}</div>
+                <div class="ai-direction ${dirCls}">
+                  <span class="ai-arrow">${arrow}</span>${dirText}
+                </div>
+                <div class="ai-confidence">${d.confidence.toFixed(1)}%</div>
+                <span class="ai-level-badge ${lvlCls}">${d.level}</span>
+              </div>`;
+          }).join('') +
+        `</div>`;
+        document.getElementById('ai_predict_body').innerHTML = html;
+      }
+
+      function _startAiPredictAutoRefresh() {
+        if (aiPredictTimer) clearInterval(aiPredictTimer);
+        loadAiPrediction();
+        aiPredictTimer = setInterval(loadAiPrediction, 5 * 60 * 1000); // 5분마다
+      }
+
+      // ── AI 툴팁 (fixed 레이어) ──
+      function showAiTooltip(event) {
+        const tip  = document.getElementById('ai_fixed_tooltip');
+        const rect = event.currentTarget.getBoundingClientRect();
+        tip.style.display = 'block';
+        // 아이콘 아래 8px에 배치, 화면 오른쪽 넘침 방지
+        const left = Math.min(rect.left, window.innerWidth - 310);
+        tip.style.left = left + 'px';
+        tip.style.top  = (rect.bottom + 8) + 'px';
+      }
+      function hideAiTooltip() {
+        document.getElementById('ai_fixed_tooltip').style.display = 'none';
+      }
+
       updateExchangeRate();
       setInterval(updateExchangeRate, 60000);
       checkAuth();
     </script>
+
+    <!-- AI 툴팁 고정 레이어 (overflow: hidden 우회) -->
+    <div id="ai_fixed_tooltip" style="
+      display:none; position:fixed; z-index:99999;
+      background:#1e2329; border:1px solid #2b3139;
+      border-radius:10px; padding:16px 18px; width:290px;
+      font-size:0.76rem; color:#eaecef; line-height:1.75;
+      box-shadow:0 10px 32px rgba(0,0,0,0.55);
+      pointer-events:none;
+    ">
+      <div style="font-weight:700; color:#f0b90b; margin-bottom:10px; font-size:0.82rem;">🤖 이 예측은 어떻게 만들어지나요?</div>
+      <div style="display:flex; gap:8px; margin-bottom:7px;">
+        <span style="color:#f0b90b; flex-shrink:0;">①</span>
+        <span><b>고래 포착</b> — 직전에 발생한 1억원 이상 대형 거래를 기준으로 분석을 시작합니다.</span>
+      </div>
+      <div style="display:flex; gap:8px; margin-bottom:7px;">
+        <span style="color:#f0b90b; flex-shrink:0;">②</span>
+        <span><b>패턴 분석</b> — 그 거래 전 10분간 매수·매도 비율, 거래량, 가격 흐름, 시간대 등을 살펴봅니다.</span>
+      </div>
+      <div style="display:flex; gap:8px; margin-bottom:10px;">
+        <span style="color:#f0b90b; flex-shrink:0;">③</span>
+        <span><b>AI 판단</b> — 과거 고래 거래 1,100건+ 사례를 학습한 모델이 가격이 오를지 내릴지 예측합니다.</span>
+      </div>
+      <div style="border-top:1px solid #2b3139; padding-top:8px; color:#848e9c; font-size:0.7rem;">
+        신뢰도 &nbsp;HIGH ≥ 70% &nbsp;·&nbsp; MED ≥ 55% &nbsp;·&nbsp; LOW &lt; 55%<br>
+        투자 판단의 참고용이며 손실을 보장하지 않습니다.
+      </div>
+    </div>
   </body>
 </html>
