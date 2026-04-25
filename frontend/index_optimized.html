@@ -2045,6 +2045,20 @@
             if (coin === currentCoin) openPrice = st.openPrice;
           }
 
+          // 백그라운드 COUNT 결과 — 진행률 표시 갱신
+          if (res.type === 'total_count') {
+            st.totalRecords = res.total_records || 0;
+            if (coin === currentCoin && st.backfillInProgress) {
+              const el = document.getElementById('backfill_status');
+              const sent = st.fullHistory.length + st.backfillBuffer.flat().length;
+              const sentMan = (sent / 10000).toFixed(0);
+              const totalMan = (st.totalRecords / 10000).toFixed(0);
+              const pct = Math.min(100, Math.round(sent / st.totalRecords * 100));
+              el.textContent = `📂 과거 데이터 로딩 중... ${sentMan}만 / ${totalMan}만건 (${pct}%)`;
+            }
+            return;
+          }
+
           if (res.type === 'history') {
             st.backfillInProgress = false;
             st.backfillBuffer = [];
@@ -2056,12 +2070,16 @@
           } else if (res.type === 'history_prepend') {
             st.backfillInProgress = true;
             st.backfillBuffer.push(res.data);
-            // 20청크마다 병합 후 차트 갱신
-            if (st.backfillBuffer.length >= 20) {
+            // 50청크마다 병합 후 차트 갱신 (이전 20청크 → 너무 잦음, 누적 데이터로 점점 무거워짐)
+            if (st.backfillBuffer.length >= 50) {
               const merged = st.backfillBuffer.flat().reverse();
               st.backfillBuffer = [];
               st.fullHistory = merged.concat(st.fullHistory);
-              if (coin === currentCoin) { fullHistory = st.fullHistory; refreshChartOnly(); }
+              if (coin === currentCoin) {
+                fullHistory = st.fullHistory;
+                // requestAnimationFrame으로 다음 프레임에 그리기 → 사용자 액션 우선
+                requestAnimationFrame(() => refreshChartOnly());
+              }
             }
             // 현재 보고있는 코인이면 진행률 표시
             if (coin === currentCoin) {

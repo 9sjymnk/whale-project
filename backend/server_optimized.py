@@ -51,7 +51,13 @@ DB_CONFIG = {
 
 # ── AUTH 헬퍼 함수 ──
 def _db():
-    return psycopg2.connect(**DB_CONFIG)
+    conn = psycopg2.connect(**DB_CONFIG)
+    # naive timestamp 컬럼 + AT TIME ZONE 'Asia/Seoul' → ::date 가
+    # 세션 타임존에 의존하므로 KST로 강제. 안 그러면 04-23 같은 날짜가 합쳐지거나 사라짐
+    with conn.cursor() as c:
+        c.execute("SET TIME ZONE 'Asia/Seoul'")
+    conn.commit()
+    return conn
 
 def _hash(pw: str) -> str:
     return bcrypt.hashpw(pw.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
@@ -151,17 +157,22 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
     conn = None # 자원 해제를 위해 미리 선언
     
     try:
+        import time as _t
         # 기준가 및 날짜 설정
+        _s = _t.monotonic()
         open_price = get_official_open_price(coin)
+        print(f"[{coin}] get_open_price: {_t.monotonic()-_s:.2f}s")
         last_update_date = datetime.now(timezone(timedelta(hours=9))).date()
 
         # ── Phase 1: 최근 500건만 즉시 전송 → 연결 완료 + 차트 즉시 표시 ──
+        _s = _t.monotonic()
         conn = psycopg2.connect(**DB_CONFIG); cur = conn.cursor()
+        print(f"[{coin}] db connect: {_t.monotonic()-_s:.2f}s")
 
-        # 전체 건수 (프론트 진행률 표시용)
-        cur.execute("SELECT COUNT(*) FROM trades WHERE code = %s", (coin,))
-        total_records = cur.fetchone()[0]
+        # COUNT는 백그라운드로 → Phase 1 안 막음, 결과 도착하면 별도 메시지로 전송
+        total_records = 0
 
+        _s = _t.monotonic()
         cur.execute("""
             SELECT price, total_amount, side, timestamp, id
             FROM (
@@ -171,8 +182,10 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
             ) sub ORDER BY timestamp ASC, id ASC
         """, (coin,))
         initial_rows = cur.fetchall()
+        print(f"[{coin}] Phase1 SELECT: {_t.monotonic()-_s:.2f}s")
         cur.close(); conn.close(); conn = None
 
+        oldest_ts = initial_rows[0][3] if initial_rows else None
         oldest_id = initial_rows[0][4] if initial_rows else None
         initial_list = [{"price": float(h[0]), "amount": float(h[1]), "side": h[2],
                          "time": int(h[3].timestamp()) + 32400, "id": h[4]} for h in initial_rows]
@@ -184,32 +197,36 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
             "total_records": total_records,
         })
 
-        # ── Phase 2: 나머지 전체 데이터를 ID 기반 페이지네이션으로 백그라운드 전송 ──
+        # ── Phase 2: 7일치 데이터를 timestamp 기반 페이지네이션으로 백그라운드 전송 ──
+        # (id 기반은 직접 백필한 데이터 - 큰 id, 오래된 timestamp - 를 못 잡음)
         async def backfill():
             try:
                 CHUNK = 10000
                 total_sent  = 0
                 chunk_idx   = 0
-                current_max_id = oldest_id  # 이미 전송한 최소 id; 그보다 이전 데이터를 역순으로 가져옴
+                cur_ts = oldest_ts
+                cur_id = oldest_id
 
                 conn2 = psycopg2.connect(**DB_CONFIG)
                 cur2  = conn2.cursor()
                 try:
                     while True:
-                        if current_max_id is not None:
-                            cur2.execute("""
-                                SELECT price, total_amount, side, timestamp, id
-                                FROM trades
-                                WHERE code = %s AND id < %s
-                                ORDER BY id DESC
-                                LIMIT %s
-                            """, (coin, current_max_id, CHUNK))
-                        else:
+                        if cur_ts is not None:
                             cur2.execute("""
                                 SELECT price, total_amount, side, timestamp, id
                                 FROM trades
                                 WHERE code = %s
-                                ORDER BY id DESC
+                                  AND (timestamp, id) < (%s, %s)
+                                  AND timestamp >= NOW() - INTERVAL '7 days'
+                                ORDER BY timestamp DESC, id DESC
+                                LIMIT %s
+                            """, (coin, cur_ts, cur_id, CHUNK))
+                        else:
+                            cur2.execute("""
+                                SELECT price, total_amount, side, timestamp, id
+                                FROM trades
+                                WHERE code = %s AND timestamp >= NOW() - INTERVAL '7 days'
+                                ORDER BY timestamp DESC, id DESC
                                 LIMIT %s
                             """, (coin, CHUNK))
 
@@ -219,7 +236,8 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
 
                         data = [{"price": float(r[0]), "amount": float(r[1]), "side": r[2],
                                  "time": int(r[3].timestamp()) + 32400, "id": r[4]} for r in rows]
-                        current_max_id = rows[-1][4]  # 청크에서 가장 작은 id
+                        cur_ts = rows[-1][3]
+                        cur_id = rows[-1][4]
                         total_sent += len(rows)
                         chunk_idx  += 1
                         await websocket.send_json({
@@ -236,13 +254,48 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
             except Exception as e:
                 print(f"Backfill error: {e}")
 
-        # 업비트 WebSocket 직접 연결하여 실시간 스트리밍
+        # 백필은 Upbit 연결 기다리지 않고 즉시 시작 (Upbit 실패해도 과거 데이터는 떠야 함)
+        backfill_task = asyncio.create_task(backfill())
+
+        # COUNT 백그라운드 — 결과 오면 별도 메시지로 진행률 표시 갱신
+        async def _send_count():
+            try:
+                def _q():
+                    c = psycopg2.connect(**DB_CONFIG); cu = c.cursor()
+                    cu.execute("SELECT COUNT(*) FROM trades WHERE code = %s AND timestamp >= NOW() - INTERVAL '7 days'", (coin,))
+                    n = cu.fetchone()[0]
+                    cu.close(); c.close()
+                    return n
+                n = await asyncio.get_running_loop().run_in_executor(None, _q)
+                await websocket.send_json({"type": "total_count", "total_records": n})
+            except Exception:
+                pass
+        asyncio.create_task(_send_count())
+
+        # 업비트 WebSocket — 실패해도 백필은 살아남도록 별도 try/except + 재시도
         upbit_uri = "wss://api.upbit.com/websocket/v1"
-        async with websockets.connect(upbit_uri, ping_interval=20, ping_timeout=30) as upbit_ws:
+        upbit_ws = None
+        for attempt in range(5):
+            try:
+                upbit_ws = await asyncio.wait_for(
+                    websockets.connect(upbit_uri, ping_interval=20, ping_timeout=30, open_timeout=15),
+                    timeout=20
+                )
+                break
+            except Exception as ue:
+                print(f"[{coin}] Upbit connect attempt {attempt+1} failed: {type(ue).__name__}: {ue!r}")
+                await asyncio.sleep(3)
+        if upbit_ws is None:
+            print(f"[{coin}] Upbit 연결 포기 — 백필만 진행")
+            try:
+                await backfill_task
+            except Exception:
+                pass
+            return
+
+        async with upbit_ws:
             sub = [{"ticket": "whale-watcher"}, {"type": "trade", "codes": [coin], "isOnlyRealtime": True}, {"format": "SIMPLE"}]
             await upbit_ws.send(json.dumps(sub))
-
-            backfill_task = asyncio.create_task(backfill())
 
             while True:
                 now_kst = datetime.now(timezone(timedelta(hours=9)))
@@ -327,7 +380,7 @@ def get_daily(coin: str):
             (array_agg(price ORDER BY timestamp DESC))[1] AS close_price,
             SUM(volume)                                    AS total_volume
         FROM trades
-        WHERE code = %s
+        WHERE code = %s AND timestamp >= NOW() - INTERVAL '45 days'
         GROUP BY (timestamp AT TIME ZONE 'Asia/Seoul')::date
         ORDER BY trade_date DESC
         LIMIT 41
@@ -384,6 +437,7 @@ def get_whale_dates(coin: str, threshold: float = 100000000):
         SELECT DISTINCT (timestamp AT TIME ZONE 'Asia/Seoul')::date AS trade_date
         FROM trades
         WHERE code = %s AND total_amount >= %s
+          AND timestamp >= NOW() - INTERVAL '60 days'
         ORDER BY trade_date DESC
         LIMIT 60
     """, (coin, threshold))
@@ -394,14 +448,16 @@ def get_whale_dates(coin: str, threshold: float = 100000000):
 @app.get("/whale/daily-log/{coin}/{date}")
 def get_daily_whale_log(coin: str, date: str, threshold: float = 100000000):
     conn = _db(); cur = conn.cursor()
+    # 함수 호출 필터(AT TIME ZONE)는 인덱스 못 씀 → 시간 범위로 변환해서 인덱스 사용
     cur.execute("""
         SELECT price, total_amount, side, timestamp, volume
         FROM trades
         WHERE code = %s
           AND total_amount >= %s
-          AND (timestamp AT TIME ZONE 'Asia/Seoul')::date = %s::date
+          AND timestamp >= (%s::date)::timestamp AT TIME ZONE 'Asia/Seoul'
+          AND timestamp <  ((%s::date) + INTERVAL '1 day')::timestamp AT TIME ZONE 'Asia/Seoul'
         ORDER BY timestamp DESC
-    """, (coin, threshold, date))
+    """, (coin, threshold, date, date))
     rows = cur.fetchall(); cur.close(); conn.close()
     return [{"price": float(r[0]), "amount": float(r[1]), "side": r[2],
              "time": int(r[3].timestamp()) + 32400, "volume": float(r[4])} for r in rows]
