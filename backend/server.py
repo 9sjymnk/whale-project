@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from jose import JWTError, jwt
 import bcrypt
-import asyncio, psycopg2, requests, json, os, websockets, pickle, numpy as np
+import asyncio, psycopg2, requests, json, os, websockets, pickle, numpy as np, time
 from datetime import datetime, timezone, timedelta
 
 # 1. 환경 변수 로드
@@ -51,7 +51,11 @@ DB_CONFIG = {
 
 # ── AUTH 헬퍼 함수 ──
 def _db():
-    return psycopg2.connect(**DB_CONFIG)
+    conn = psycopg2.connect(**DB_CONFIG)
+    with conn.cursor() as c:
+        c.execute("SET TIME ZONE 'Asia/Seoul'")
+    conn.commit()
+    return conn
 
 def _hash(pw: str) -> str:
     return bcrypt.hashpw(pw.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
@@ -80,6 +84,20 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     return {"id": row[0], "username": row[1], "email": row[2], "created_at": row[3].isoformat() if row[3] else None}
 
 
+# ── 고래 쿼리 캐시 (5분 TTL) ──
+_whale_cache: dict = {}
+_WHALE_TTL = 300
+
+def _wcache_get(key):
+    entry = _whale_cache.get(key)
+    if entry and time.time() < entry[1]:
+        return entry[0]
+    return None
+
+def _wcache_set(key, data):
+    _whale_cache[key] = (data, time.time() + _WHALE_TTL)
+
+
 # ── AUTH 엔드포인트 ──
 @app.on_event("startup")
 def create_users_table():
@@ -96,6 +114,9 @@ def create_users_table():
             kakao_token TEXT
         )
     """)
+    # trades 테이블 인덱스 (없으면 생성 — 전체 스캔 방지)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_trades_code_ts ON trades (code, timestamp)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_trades_code_amount ON trades (code, total_amount)")
     conn.commit(); cur.close(); conn.close()
 
 
@@ -178,7 +199,26 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
 
         # 업비트 WebSocket 직접 연결하여 실시간 스트리밍
         upbit_uri = "wss://api.upbit.com/websocket/v1"
-        async with websockets.connect(upbit_uri, ping_interval=20, ping_timeout=30) as upbit_ws:
+        upbit_ws = None
+        for attempt in range(5):
+            _tmp_ws = None
+            try:
+                _tmp_ws = await asyncio.wait_for(
+                    websockets.connect(upbit_uri, ping_interval=None, ping_timeout=None, open_timeout=15),
+                    timeout=20
+                )
+                upbit_ws = _tmp_ws
+                break
+            except Exception as ue:
+                print(f"[{coin}] Upbit connect attempt {attempt+1} failed: {type(ue).__name__}: {ue!r}")
+                if _tmp_ws is not None:
+                    await _tmp_ws.close()
+                await asyncio.sleep(3)
+        if upbit_ws is None:
+            print(f"[{coin}] Upbit 연결 포기")
+            return
+
+        async with upbit_ws:
             sub = [{"ticket": "whale-watcher"}, {"type": "trade", "codes": [coin], "isOnlyRealtime": True}, {"format": "SIMPLE"}]
             await upbit_ws.send(json.dumps(sub))
 
@@ -261,7 +301,7 @@ def get_daily(coin: str):
             (array_agg(price ORDER BY timestamp DESC))[1] AS close_price,
             SUM(volume)                                    AS total_volume
         FROM trades
-        WHERE code = %s
+        WHERE code = %s AND timestamp >= NOW() - INTERVAL '45 days'
         GROUP BY (timestamp AT TIME ZONE 'Asia/Seoul')::date
         ORDER BY trade_date DESC
         LIMIT 41
@@ -286,6 +326,10 @@ def get_daily(coin: str):
 
 @app.get("/whale/hourly/{coin}")
 def get_hourly_whale(coin: str, threshold: float = 100000000, days: int = 7):
+    key = f"hourly:{coin}:{threshold}:{days}"
+    cached = _wcache_get(key)
+    if cached is not None:
+        return cached
     conn = _db(); cur = conn.cursor()
     cur.execute(f"""
         SELECT
@@ -308,37 +352,53 @@ def get_hourly_whale(coin: str, threshold: float = 100000000, days: int = 7):
                            "sell_total": float(r[4]), "buy_cnt": int(r[5]), "sell_cnt": int(r[6])}
               for r in rows}
     empty = {"cnt": 0, "total": 0.0, "buy_total": 0.0, "sell_total": 0.0, "buy_cnt": 0, "sell_cnt": 0}
-    return [{"hour": h, **lookup.get(h, empty)} for h in range(24)]
+    result = [{"hour": h, **lookup.get(h, empty)} for h in range(24)]
+    _wcache_set(key, result)
+    return result
 
 
 @app.get("/whale/dates/{coin}")
 def get_whale_dates(coin: str, threshold: float = 100000000):
+    key = f"dates:{coin}:{threshold}"
+    cached = _wcache_get(key)
+    if cached is not None:
+        return cached
     conn = _db(); cur = conn.cursor()
     cur.execute("""
         SELECT DISTINCT (timestamp AT TIME ZONE 'Asia/Seoul')::date AS trade_date
         FROM trades
         WHERE code = %s AND total_amount >= %s
+          AND timestamp >= NOW() - INTERVAL '60 days'
         ORDER BY trade_date DESC
         LIMIT 60
     """, (coin, threshold))
     rows = cur.fetchall(); cur.close(); conn.close()
-    return [str(r[0]) for r in rows]
+    result = [str(r[0]) for r in rows]
+    _wcache_set(key, result)
+    return result
 
 
 @app.get("/whale/daily-log/{coin}/{date}")
 def get_daily_whale_log(coin: str, date: str, threshold: float = 100000000):
+    key = f"log:{coin}:{date}:{threshold}"
+    cached = _wcache_get(key)
+    if cached is not None:
+        return cached
     conn = _db(); cur = conn.cursor()
     cur.execute("""
         SELECT price, total_amount, side, timestamp, volume
         FROM trades
         WHERE code = %s
           AND total_amount >= %s
-          AND (timestamp AT TIME ZONE 'Asia/Seoul')::date = %s::date
+          AND timestamp >= (%s::date)::timestamp AT TIME ZONE 'Asia/Seoul'
+          AND timestamp <  ((%s::date) + INTERVAL '1 day')::timestamp AT TIME ZONE 'Asia/Seoul'
         ORDER BY timestamp DESC
-    """, (coin, threshold, date))
+    """, (coin, threshold, date, date))
     rows = cur.fetchall(); cur.close(); conn.close()
-    return [{"price": float(r[0]), "amount": float(r[1]), "side": r[2],
-             "time": int(r[3].timestamp()) + 32400, "volume": float(r[4])} for r in rows]
+    result = [{"price": float(r[0]), "amount": float(r[1]), "side": r[2],
+               "time": int(r[3].timestamp()) + 32400, "volume": float(r[4])} for r in rows]
+    _wcache_set(key, result)
+    return result
 
 
 # ── AI 예측 ──
@@ -449,3 +509,8 @@ def predict_price_after_whale(coin: str = "KRW-BTC"):
         }
 
     return result
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=8000, ws_ping_interval=None)

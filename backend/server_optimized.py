@@ -278,7 +278,7 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
         for attempt in range(5):
             try:
                 upbit_ws = await asyncio.wait_for(
-                    websockets.connect(upbit_uri, ping_interval=20, ping_timeout=30, open_timeout=15),
+                    websockets.connect(upbit_uri, ping_interval=None, ping_timeout=None, open_timeout=15),
                     timeout=20
                 )
                 break
@@ -571,3 +571,8 @@ def predict_price_after_whale(coin: str = "KRW-BTC"):
         }
 
     return result
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=8081, ws_ping_interval=None)
