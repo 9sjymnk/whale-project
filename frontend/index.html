@@ -1532,6 +1532,7 @@
         document.getElementById('nav_whale_btn').classList.toggle('active', page === 'whale');
         if (page === 'exchange' && !wsStarted) {
           wsStarted = true;
+          currentCoin = document.getElementById('coin_select').value;
           initChart();
           connectWS();
           loadDaily();
@@ -1985,13 +1986,42 @@
 
       let reconnectTimer = null;
       let intentionalClose = false;
+      let currentCoin = document.getElementById('coin_select').value;
+      let backfillIsDone = false;
+      const coinCache = {}; // { 'KRW-BTC': { history: [...], backfillDone: bool } }
 
       function reconnectWS() {
-        if (socket) { intentionalClose = true; socket.close(); intentionalClose = false; }
-        fullHistory = [];
+        // 현재 코인 데이터 캐시에 저장
+        if (currentCoin && fullHistory.length > 0) {
+          coinCache[currentCoin] = { history: fullHistory.slice(), backfillDone: backfillIsDone };
+        }
+
+        const newCoin = document.getElementById('coin_select').value;
+        currentCoin = newCoin;
+        backfillIsDone = false;
+
+        if (socket) { intentionalClose = true; socket.close(); }
+
+        // 캐시 복원
+        const cached = coinCache[newCoin];
+        if (cached) {
+          fullHistory = cached.history.slice();
+          backfillIsDone = cached.backfillDone;
+        } else {
+          fullHistory = [];
+        }
+
         dailyData = [];
         dailyExpanded = false;
         initChart();
+        if (cached) {
+          refreshUI();
+          const el = document.getElementById('backfill_status');
+          el.style.display = 'block';
+          el.textContent = cached.backfillDone
+            ? `✅ 캐시 복원 완료 (${fullHistory.length.toLocaleString()}건)`
+            : `📂 캐시 복원 중 (${fullHistory.length.toLocaleString()}건)`;
+        }
         connectWS();
         loadDaily();
         loadAiPrediction();
@@ -1999,7 +2029,7 @@
 
       function connectWS() {
         if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
-        const coin = document.getElementById('coin_select').value;
+        const coin = currentCoin || document.getElementById('coin_select').value;
         document.getElementById('conn_status').textContent = '연결 중...';
         socket = new WebSocket(`${WS_BASE}/ws/${coin}`);
         socket.onopen = () => {
@@ -2010,27 +2040,39 @@
           if (res.type === 'heartbeat') return;
           if (res.open_price) openPrice = res.open_price;
           if (res.type === 'history') {
-            fullHistory = res.data;
-            refreshUI();
+            if (!coinCache[coin]) {
+              fullHistory = res.data;
+              refreshUI();
+            }
           } else if (res.type === 'history_prepend') {
-            fullHistory = [...res.data, ...fullHistory];
-            // 10청크마다 1번만 차트 갱신 (매번 갱신하면 수백만 행 반복으로 브라우저 프리징)
-            if (res.chunk % 10 === 0) refreshUI();
-            document.getElementById('backfill_status').style.display = 'block';
-            document.getElementById('backfill_status').textContent =
-              `📂 과거 데이터 로딩 중... ${res.total_sent.toLocaleString()}건`;
+            if (!coinCache[coin]) {
+              fullHistory = [...res.data, ...fullHistory];
+              // 10청크마다 1번만 차트 갱신 (매번 갱신하면 수백만 행 반복으로 브라우저 프리징)
+              if (res.chunk % 10 === 0) refreshUI();
+              document.getElementById('backfill_status').style.display = 'block';
+              document.getElementById('backfill_status').textContent =
+                `📂 과거 데이터 로딩 중... ${res.total_sent.toLocaleString()}건`;
+            }
           } else if (res.type === 'backfill_done') {
-            refreshUI();
-            const el = document.getElementById('backfill_status');
-            if (res.total === 0) {
-              el.style.display = 'none';
-            } else {
-              el.textContent = `✅ 과거 데이터 로딩 완료 (${res.total.toLocaleString()}건)`;
-              setTimeout(() => { el.style.display = 'none'; }, 3000);
+            backfillIsDone = true;
+            if (!coinCache[coin]) {
+              refreshUI();
+              const el = document.getElementById('backfill_status');
+              if (res.total === 0) {
+                el.style.display = 'none';
+              } else {
+                el.textContent = `✅ 과거 데이터 로딩 완료 (${res.total.toLocaleString()}건)`;
+                setTimeout(() => { el.style.display = 'none'; }, 3000);
+              }
             }
           } else if (res.type === 'tick') {
             fullHistory.push(res);
             if (fullHistory.length > 5000) fullHistory.shift();
+            // 캐시에도 틱 반영
+            if (coinCache[coin]) {
+              coinCache[coin].history.push(res);
+              if (coinCache[coin].history.length > 300000) coinCache[coin].history.shift();
+            }
             const th = parseFloat(document.getElementById('threshold').value) * 1e8;
             if (res.amount >= th) showToast(res.side, res.amount, res.price);
             updateMetrics(res.price);
@@ -2039,7 +2081,8 @@
         };
         socket.onclose = () => {
           document.getElementById('conn_status').textContent = '재연결 중...';
-          if (!intentionalClose) reconnectTimer = setTimeout(() => connectWS(), 3000);
+          if (intentionalClose) { intentionalClose = false; return; }
+          reconnectTimer = setTimeout(() => connectWS(), 3000);
         };
         socket.onerror = () => { socket.close(); };
       }
