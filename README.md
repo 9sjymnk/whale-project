@@ -29,7 +29,7 @@ pip install fastapi uvicorn psycopg2 requests python-jose bcrypt python-dotenv x
 
 ```bash
 cd backend
-uvicorn server:app --reload --host 0.0.0.0 --port 8000
+python server.py
 ```
 
 ### 3. AI 예측 모델 학습 (최초 1회)
@@ -56,11 +56,11 @@ python train_model.py
 ```bash
 # 터미널 1 — 기존 버전 (포트 8000)
 cd backend
-uvicorn server:app --port 8000
+python server.py
 
 # 터미널 2 — 최적화 버전 (포트 8081)
 cd backend
-uvicorn server_optimized:app --port 8081
+python server_optimized.py
 ```
 
 브라우저 탭 2개를 열어 나란히 비교합니다.
