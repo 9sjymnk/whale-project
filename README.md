@@ -80,6 +80,39 @@ python server_optimized.py
 
 ---
 
+## ⚡ AWS EC2 성능 설정 (CPU 크레딧 무제한)
+
+T2/T3 같은 버스터블 인스턴스는 CPU 크레딧이 소진되면 성능이 기준치(20~40%)로 **자동 스로틀링**됩니다.
+데이터 수집·쿼리·WebSocket 처리가 전반적으로 느려지는 원인이 됩니다.
+
+**설정 방법 (AWS 콘솔)**
+
+> EC2 → 인스턴스 선택 → 작업 → 인스턴스 설정 → **크레딧 사양 변경 → 무제한 체크**
+
+또는 AWS CLI:
+
+```bash
+aws ec2 modify-instance-credit-specification \
+  --instance-credit-specifications "InstanceId=i-xxxxxxxxxxxx,CpuCredits=unlimited"
+```
+
+**크레딧 잔량 확인 (CloudWatch)**
+
+```bash
+aws cloudwatch get-metric-statistics \
+  --namespace AWS/EC2 \
+  --metric-name CPUCreditBalance \
+  --dimensions Name=InstanceId,Value=i-xxxxxxxxxxxx \
+  --start-time $(date -u -d '1 hour ago' +%FT%TZ) \
+  --end-time $(date -u +%FT%TZ) \
+  --period 300 \
+  --statistics Average
+```
+
+`CPUCreditBalance`가 0에 가까우면 스로틀링 중입니다. 무제한 모드는 초과 사용량에 소액 추가 과금이 발생합니다.
+
+---
+
 ## 📐 네이밍 컨벤션 & 프로젝트 구조
 
 파일명, 폴더명, 변수명, API 엔드포인트 등 코드 작성 규칙은 아래 문서를 참고하세요.
