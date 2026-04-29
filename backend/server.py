@@ -419,11 +419,12 @@ def _build_prediction_features(coin: str) -> np.ndarray | None:
     """최근 고래 거래 직전 10분 데이터로 특성 벡터 생성"""
     conn = _db(); cur = conn.cursor()
 
-    # 가장 최근 고래 거래
+    # 가장 최근 고래 거래 (30분 이내만 유효)
     cur.execute("""
         SELECT timestamp, price, side, total_amount
         FROM trades
         WHERE code = %s AND total_amount >= 100000000
+          AND timestamp >= NOW() - INTERVAL '30 minutes'
         ORDER BY timestamp DESC LIMIT 1
     """, (coin,))
     row = cur.fetchone()
