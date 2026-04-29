@@ -3,8 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <title>Whale Watcher Pro</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" rel="stylesheet" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
     <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
     <style>
       :root {
@@ -31,7 +33,7 @@
         flex-direction: column;
         height: 100vh;
         overflow: hidden;
-        font-family: 'Inter', 'Segoe UI', sans-serif;
+        font-family: 'Pretendard Variable', Pretendard, 'Segoe UI', sans-serif;
       }
 
       /* ── NAVBAR ── */
@@ -368,7 +370,12 @@
 
       select {
         width: 100%;
-        background: var(--card-bg);
+        background-color: #1e2329;
+        background-color: var(--card-bg);
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%23848e9c'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        color: #eaecef;
         color: var(--text);
         border: 1px solid var(--border);
         border-radius: 8px;
@@ -378,9 +385,8 @@
         outline: none;
         cursor: pointer;
         appearance: none;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%23848e9c'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
-        background-repeat: no-repeat;
-        background-position: right 12px center;
+        -webkit-appearance: none;
+        -moz-appearance: none;
         transition: border-color 0.15s;
       }
       select:focus { border-color: var(--accent); }
@@ -2110,7 +2116,12 @@
       let whaleHourlyData = [];
 
       async function loadWhaleAnalysis() {
-        await Promise.all([loadWhaleHourly(), loadWhaleDates()]);
+        const coin      = document.getElementById('whale_coin').value;
+        const threshold = document.getElementById('whale_threshold').value;
+        // 오늘 날짜 로그를 hourly/dates와 동시에 선제 요청 — dates 응답 대기 없이 병렬 실행
+        const todayKST  = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
+        const prefetch  = fetch(`${API_BASE}/whale/daily-log/${coin}/${todayKST}?threshold=${threshold}`);
+        await Promise.all([loadWhaleHourly(), loadWhaleDates(prefetch, todayKST)]);
       }
 
       async function loadWhaleHourly() {
@@ -2192,7 +2203,7 @@
           </div>`;
       }
 
-      async function loadWhaleDates() {
+      async function loadWhaleDates(prefetchResp, prefetchDate) {
         const coin      = document.getElementById('whale_coin').value;
         const threshold = document.getElementById('whale_threshold').value;
         try {
@@ -2203,22 +2214,27 @@
           const prev = sel.value;
           sel.innerHTML = '<option value="">날짜 선택...</option>' +
             dates.map(d => `<option value="${d}"${d === prev ? ' selected' : ''}>${d}</option>`).join('');
-          if (prev && dates.includes(prev)) {
-            loadWhaleLog();
-          } else if (dates.length > 0) {
-            sel.value = dates[0];
+          const targetDate = (prev && dates.includes(prev)) ? prev : (dates.length > 0 ? dates[0] : null);
+          if (!targetDate) return;
+          sel.value = targetDate;
+          // 선제 요청한 오늘 날짜와 일치하면 재사용, 아니면 새로 요청
+          if (prefetchResp && prefetchDate === targetDate) {
+            loadWhaleLog(prefetchResp);
+          } else {
             loadWhaleLog();
           }
         } catch (e) {}
       }
 
-      async function loadWhaleLog() {
+      async function loadWhaleLog(reusedResp) {
         const date      = document.getElementById('whale_date_select').value;
         if (!date) return;
         const coin      = document.getElementById('whale_coin').value;
         const threshold = document.getElementById('whale_threshold').value;
         try {
-          const res = await fetch(`${API_BASE}/whale/daily-log/${coin}/${date}?threshold=${threshold}`);
+          const res = reusedResp
+            ? await reusedResp
+            : await fetch(`${API_BASE}/whale/daily-log/${coin}/${date}?threshold=${threshold}`);
           if (!res.ok) return;
           const data = await res.json();
           renderWhaleDateSummary(data);
