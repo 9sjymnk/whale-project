@@ -4,4 +4,4 @@ __pycache__/
 venv/
 .envdata/ 
 .env 
-data/
+data/docs/*.xlsx
