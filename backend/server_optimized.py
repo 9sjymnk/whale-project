@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from jose import JWTError, jwt
 import bcrypt
-import asyncio, psycopg2, requests, json, os, websockets, pickle, numpy as np
+import asyncio, psycopg2, requests, json, os, websockets, pickle, numpy as np, time
 from datetime import datetime, timezone, timedelta
 
 # 1. 환경 변수 로드
@@ -31,6 +31,9 @@ class UserRegister(BaseModel):
 class UserLogin(BaseModel):
     username: str
     password: str
+
+class SlackWebhookUpdate(BaseModel):
+    webhook_url: str
 
 # 2. CORS 설정 (기존 유지)
 app.add_middleware(
@@ -79,11 +82,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     except JWTError:
         raise exc
     conn = _db(); cur = conn.cursor()
-    cur.execute("SELECT id, username, email, created_at FROM users WHERE username=%s AND is_active=TRUE", (username,))
+    cur.execute("SELECT id, username, email, created_at, slack_webhook FROM users WHERE username=%s AND is_active=TRUE", (username,))
     row = cur.fetchone(); cur.close(); conn.close()
     if not row:
         raise exc
-    return {"id": row[0], "username": row[1], "email": row[2], "created_at": row[3].isoformat() if row[3] else None}
+    return {"id": row[0], "username": row[1], "email": row[2], "created_at": row[3].isoformat() if row[3] else None, "slack_webhook": row[4]}
 
 
 # ── AUTH 엔드포인트 ──
@@ -139,6 +142,76 @@ def me(user=Depends(get_current_user)):
     return user
 
 
+@app.put("/auth/slack-webhook")
+def update_slack_webhook(data: SlackWebhookUpdate, user=Depends(get_current_user)):
+    conn = _db(); cur = conn.cursor()
+    url = data.webhook_url.strip() or None
+    cur.execute("UPDATE users SET slack_webhook = %s WHERE username = %s", (url, user["username"]))
+    conn.commit(); cur.close(); conn.close()
+    return {"ok": True}
+
+
+class SlackWhaleNotify(BaseModel):
+    coin: str
+    side: str
+    price: float
+    amount: float
+    volume: float
+    time_str: str
+
+@app.post("/notify/slack-whale")
+async def notify_slack_whale_endpoint(data: SlackWhaleNotify, user=Depends(get_current_user)):
+    webhook = user.get("slack_webhook")
+    if not webhook:
+        return {"ok": False}
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, _send_slack, webhook, data.coin, data.side, data.price, data.amount, data.volume, data.time_str)
+    return {"ok": True}
+
+
+# ── WebSocket 연결 관리자 ──
+class ConnectionManager:
+    def __init__(self):
+        self.connections: dict[str, list[WebSocket]] = {}
+
+    def add(self, coin: str, ws: WebSocket):
+        self.connections.setdefault(coin, []).append(ws)
+
+    def remove(self, coin: str, ws: WebSocket):
+        if coin in self.connections:
+            try:
+                self.connections[coin].remove(ws)
+            except ValueError:
+                pass
+
+    async def broadcast(self, coin: str, message: dict):
+        for ws in list(self.connections.get(coin, [])):
+            try:
+                await ws.send_json(message)
+            except Exception:
+                pass
+
+manager = ConnectionManager()
+
+
+# ── Slack 고래 알림 ──
+def _send_slack(webhook_url: str, coin: str, side: str, price: float, amount: float, volume: float, time_str: str):
+    side_label = "🟢 매수" if side == "BID" else "🔴 매도"
+    coin_name = coin.replace("KRW-", "")
+    text = (
+        f"🐋 고래 거래 감지 [{coin_name}]\n"
+        f"{side_label}\n"
+        f"체결가: ₩{int(price):,}\n"
+        f"수량: {volume:.4f} {coin_name}\n"
+        f"총액: {amount / 1e8:.2f}억원\n"
+        f"시각: {time_str} (KST)"
+    )
+    try:
+        requests.post(webhook_url, json={"text": text}, timeout=5)
+    except Exception as e:
+        print(f"슬랙 알림 실패: {e}")
+
+
 # 4. 기준가 가져오기 함수 (업비트 UI와 일치하도록 ticker API로 수정)
 def get_official_open_price(market):
     try:
@@ -153,6 +226,7 @@ def get_official_open_price(market):
 @app.websocket("/ws/{coin}")
 async def websocket_endpoint(websocket: WebSocket, coin: str):
     await websocket.accept()
+    manager.add(coin, websocket)
     
     conn = None # 자원 해제를 위해 미리 선언
     
@@ -360,6 +434,7 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
         print(f"ERROR: {e}")
 
     finally:
+        manager.remove(coin, websocket)
         if conn:
             conn.close()
         try:
@@ -477,16 +552,16 @@ def _load_model() -> dict:
     return _model_bundle
 
 
-def _build_prediction_features(coin: str) -> np.ndarray | None:
-    """최근 고래 거래 직전 10분 데이터로 특성 벡터 생성"""
+def _build_prediction_features(coin: str):
+    """최근 고래 거래 직전 10분 데이터로 특성 벡터 생성. (features, seconds_ago) 반환"""
     conn = _db(); cur = conn.cursor()
 
-    # 가장 최근 고래 거래 (30분 이내만 유효)
+    # 가장 최근 고래 거래 (시간 제한 없음)
     cur.execute("""
-        SELECT timestamp, price, side, total_amount
+        SELECT timestamp, price, side, total_amount,
+               EXTRACT(EPOCH FROM (NOW() - timestamp))::int AS seconds_ago
         FROM trades
         WHERE code = %s AND total_amount >= 100000000
-          AND timestamp >= NOW() - INTERVAL '30 minutes'
         ORDER BY timestamp DESC LIMIT 1
     """, (coin,))
     row = cur.fetchone()
@@ -494,7 +569,7 @@ def _build_prediction_features(coin: str) -> np.ndarray | None:
         cur.close(); conn.close()
         return None
 
-    ts, w_price, w_side, w_amt = row
+    ts, w_price, w_side, w_amt, seconds_ago = row
     w_price = float(w_price)
     w_amt   = float(w_amt)
 
@@ -521,7 +596,7 @@ def _build_prediction_features(coin: str) -> np.ndarray | None:
     price_mean  = float(np.mean(prices))
     price_std   = float(np.std(prices))
 
-    return np.array([[
+    X = np.array([[
         buy_amount / total_amt if total_amt > 0 else 0.5,
         buy_count  / total_cnt if total_cnt > 0 else 0.5,
         (prices[-1] - prices[0]) / prices[0] * 100 if prices[0] else 0.0,
@@ -532,6 +607,7 @@ def _build_prediction_features(coin: str) -> np.ndarray | None:
         ts.hour,
         price_std / price_mean * 100 if price_mean else 0.0,
     ]])
+    return (X, int(seconds_ago), ts.strftime('%H:%M:%S'))
 
 
 def _confidence_label(prob: float) -> str:
@@ -545,11 +621,12 @@ def _confidence_label(prob: float) -> str:
 @app.get("/predict/price-after-whale")
 def predict_price_after_whale(coin: str = "KRW-BTC"):
     bundle = _load_model()
-    X = _build_prediction_features(coin)
-    if X is None:
+    feat = _build_prediction_features(coin)
+    if feat is None:
         raise HTTPException(status_code=422, detail="예측에 필요한 고래 거래 데이터가 부족합니다.")
 
-    result = {}
+    X, seconds_ago, whale_time = feat
+    result = {"whale_seconds_ago": seconds_ago, "whale_time": whale_time}
     for tf in ["1m", "5m", "30m"]:
         entry  = bundle[tf]
         model  = entry["model"]
@@ -572,6 +649,40 @@ def predict_price_after_whale(coin: str = "KRW-BTC"):
         }
 
     return result
+
+
+@app.post("/debug/inject-whale")
+async def inject_whale(coin: str = "KRW-BTC", side: str = "BID", amount: float = 2_000_000_000):
+    """데모용 고래 거래 주입. 나중에 DELETE FROM trades WHERE sid LIKE 'demo_%' 로 정리."""
+    try:
+        ts = datetime.now(timezone(timedelta(hours=9)))
+        price = get_official_open_price(coin)
+        volume = amount / price if price else 0
+        sid = -int(ts.timestamp() * 1000)
+        change_dir = "RISE" if side == "BID" else "FALL"
+
+        conn = _db(); cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO trades (timestamp, code, price, volume, side, total_amount, pcp, change, sid)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
+        """, (ts, coin, price, volume, side, amount, price, change_dir, sid))
+        trade_id = cur.fetchone()[0]
+        conn.commit(); cur.close(); conn.close()
+
+        tick = {
+            "type": "tick",
+            "price": price,
+            "amount": amount,
+            "side": side,
+            "time": int(ts.timestamp()) + 32400,
+            "id": trade_id,
+            "open_price": price,
+        }
+        await manager.broadcast(coin, tick)
+        return {"ok": True, "sid": sid, "price": price, "amount": amount, "volume": volume}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":
