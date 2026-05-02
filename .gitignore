@@ -2,6 +2,9 @@
 backend/.git/
 __pycache__/
 venv/
-.envdata/ 
-.env 
+.envdata/
+.env
 data/docs/*.xlsx
+data/postgres/
+.claude/
+frontend/.claude/
