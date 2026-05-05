@@ -148,7 +148,7 @@ def _wcache_set(key, data):
 
 # ── AUTH 엔드포인트 ──
 @app.on_event("startup")
-async def create_users_table():
+def create_users_table():
     conn = _db(); cur = conn.cursor()
     cur.execute("""
         CREATE TABLE IF NOT EXISTS users (
@@ -165,23 +165,7 @@ async def create_users_table():
     # trades 테이블 인덱스 (없으면 생성 — 전체 스캔 방지)
     cur.execute("CREATE INDEX IF NOT EXISTS idx_trades_code_ts ON trades (code, timestamp)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_trades_code_amount ON trades (code, total_amount)")
-    # 예측 로그 테이블
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS prediction_log (
-            id SERIAL PRIMARY KEY,
-            coin VARCHAR(20) NOT NULL,
-            predicted_at TIMESTAMPTZ DEFAULT NOW(),
-            timeframe VARCHAR(5) NOT NULL,
-            direction VARCHAR(5) NOT NULL,
-            confidence FLOAT NOT NULL,
-            whale_price FLOAT,
-            actual_price FLOAT,
-            correct BOOLEAN
-        )
-    """)
-    cur.execute("CREATE INDEX IF NOT EXISTS idx_pred_log_coin_tf ON prediction_log (coin, timeframe, predicted_at)")
     conn.commit(); cur.close(); conn.close()
-    asyncio.get_event_loop().create_task(_prediction_verifier())
 
 
 @app.post("/auth/register")
@@ -576,50 +560,6 @@ def _confidence_label(prob: float) -> str:
     return "LOW"
 
 
-def _get_price_at(coin: str, at: datetime) -> float | None:
-    """특정 시각 이후 첫 번째 체결가 반환"""
-    conn = _db(); cur = conn.cursor()
-    cur.execute("""
-        SELECT price FROM trades
-        WHERE code = %s AND timestamp >= %s
-        ORDER BY timestamp ASC LIMIT 1
-    """, (coin, at))
-    row = cur.fetchone()
-    cur.close(); conn.close()
-    return float(row[0]) if row else None
-
-
-async def _prediction_verifier():
-    """미검증 예측을 주기적으로 확인해서 correct 업데이트"""
-    TF_SECONDS = {"1m": 60, "5m": 300, "30m": 1800}
-    while True:
-        await asyncio.sleep(60)
-        try:
-            conn = _db(); cur = conn.cursor()
-            cur.execute("""
-                SELECT id, coin, predicted_at, timeframe, direction, whale_price
-                FROM prediction_log
-                WHERE correct IS NULL
-            """)
-            rows = cur.fetchall()
-            for row_id, coin, predicted_at, tf, direction, whale_price in rows:
-                seconds = TF_SECONDS.get(tf, 60)
-                check_at = predicted_at + timedelta(seconds=seconds)
-                if datetime.now(check_at.tzinfo) < check_at:
-                    continue
-                actual = _get_price_at(coin, check_at)
-                if actual is None:
-                    continue
-                correct = (direction == "UP" and actual > whale_price) or \
-                          (direction == "DOWN" and actual < whale_price)
-                cur.execute("""
-                    UPDATE prediction_log SET actual_price = %s, correct = %s WHERE id = %s
-                """, (actual, correct, row_id))
-            conn.commit(); cur.close(); conn.close()
-        except Exception as e:
-            print(f"prediction verifier error: {e}")
-
-
 @app.get("/predict/price-after-whale")
 def predict_price_after_whale(coin: str = "KRW-BTC"):
     bundle = _load_model()
@@ -629,11 +569,6 @@ def predict_price_after_whale(coin: str = "KRW-BTC"):
 
     X, seconds_ago, whale_time = feat
     result = {"whale_seconds_ago": seconds_ago, "whale_time": whale_time}
-
-    # 고래 거래 시점 실제 가격 조회 (correct 판정 기준)
-    whale_price = _get_price_at(coin, datetime.now(timezone(timedelta(hours=9))) - timedelta(seconds=seconds_ago))
-
-    logs = []
     for tf in ["1m", "5m", "30m"]:
         entry  = bundle[tf]
         model  = entry["model"]
@@ -649,30 +584,11 @@ def predict_price_after_whale(coin: str = "KRW-BTC"):
             pred = int(model.predict(X_input)[0])
             conf = 0.0
 
-        direction = "UP" if pred == 1 else "DOWN"
         result[tf] = {
-            "direction":  direction,
+            "direction":  "UP" if pred == 1 else "DOWN",
             "confidence": round(conf, 1),
             "level":      _confidence_label(conf / 100),
         }
-        logs.append((coin, tf, direction, round(conf, 1), whale_price))
-
-    # prediction_log 저장 (중복 방지: 1분 이내 같은 코인·타임프레임 예측 제외)
-    try:
-        conn = _db(); cur = conn.cursor()
-        for coin_, tf, direction, conf, wp in logs:
-            cur.execute("""
-                INSERT INTO prediction_log (coin, timeframe, direction, confidence, whale_price)
-                SELECT %s, %s, %s, %s, %s
-                WHERE NOT EXISTS (
-                    SELECT 1 FROM prediction_log
-                    WHERE coin = %s AND timeframe = %s
-                    AND predicted_at > NOW() - INTERVAL '1 minute'
-                )
-            """, (coin_, tf, direction, conf, wp, coin_, tf))
-        conn.commit(); cur.close(); conn.close()
-    except Exception as e:
-        print(f"prediction_log insert error: {e}")
 
     return result
 
