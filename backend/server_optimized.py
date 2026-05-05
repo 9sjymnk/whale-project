@@ -157,6 +157,7 @@ class SlackWhaleNotify(BaseModel):
     price: float
     amount: float
     volume: float
+    date_str: str = ""
     time_str: str
 
 @app.post("/notify/slack-whale")
@@ -165,7 +166,7 @@ async def notify_slack_whale_endpoint(data: SlackWhaleNotify, user=Depends(get_c
     if not webhook:
         return {"ok": False}
     loop = asyncio.get_event_loop()
-    await loop.run_in_executor(None, _send_slack, webhook, data.coin, data.side, data.price, data.amount, data.volume, data.time_str)
+    await loop.run_in_executor(None, _send_slack, webhook, data.coin, data.side, data.price, data.amount, data.volume, data.date_str, data.time_str)
     return {"ok": True}
 
 
@@ -195,15 +196,17 @@ manager = ConnectionManager()
 
 
 # ── Slack 고래 알림 ──
-def _send_slack(webhook_url: str, coin: str, side: str, price: float, amount: float, volume: float, time_str: str):
+def _send_slack(webhook_url: str, coin: str, side: str, price: float, amount: float, volume: float, date_str: str, time_str: str):
     side_label = "🟢 매수" if side == "BID" else "🔴 매도"
     coin_name = coin.replace("KRW-", "")
+    date_line = f"날짜: {date_str}\n" if date_str else ""
     text = (
         f"🐋 고래 거래 감지 [{coin_name}]\n"
         f"{side_label}\n"
         f"체결가: ₩{int(price):,}\n"
         f"수량: {volume:.4f} {coin_name}\n"
         f"총액: {amount / 1e8:.2f}억원\n"
+        f"{date_line}"
         f"시각: {time_str} (KST)"
     )
     try:

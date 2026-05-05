@@ -2214,8 +2214,9 @@
             ? `$${(amount / exchangeRate / 1e6).toFixed(2)}M`
             : `₩${(amount / 1e8).toFixed(2)}억`;
         const now = new Date();
+        const dateStr = now.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
         const timeStr = now.toLocaleTimeString('ko-KR', { hour12: false });
-        toast.innerHTML = `🐳 <strong>고래 ${isBuy ? '매수' : '매도'} 포착!</strong><br>규모: ${displayAmount}<br>가격: ${formatPrice(price)}<br>시각: ${timeStr} (KST)`;
+        toast.innerHTML = `🐳 <strong>고래 ${isBuy ? '매수' : '매도'} 포착!</strong><br>규모: ${displayAmount}<br>가격: ${formatPrice(price)}<br>날짜: ${dateStr}<br>시각: ${timeStr} (KST)`;
         container.appendChild(toast);
         setTimeout(() => {
           toast.style.opacity = '0';
@@ -3055,13 +3056,15 @@
         const now = Date.now();
         if (now - (_slackCooldown[coin] || 0) < 60000) return;
         _slackCooldown[coin] = now;
-        const timeStr = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+        const _now = new Date();
+        const dateStr = _now.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
+        const timeStr = _now.toLocaleTimeString('ko-KR', { hour12: false });
         const volume = price > 0 ? amount / price : 0;
         try {
           fetch(`${API_BASE}/notify/slack-whale`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ coin, side, price, amount, volume, time_str: timeStr }),
+            body: JSON.stringify({ coin, side, price, amount, volume, date_str: dateStr, time_str: timeStr }),
           });
         } catch (e) {}
       }
