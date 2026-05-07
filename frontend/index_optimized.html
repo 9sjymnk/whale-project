@@ -610,6 +610,98 @@
         font-family: 'JetBrains Mono', monospace;
       }
 
+      /* ── 외부 지표 카드 (백로그 12·13·14) ── */
+      .ext-metrics {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin-bottom: 18px;
+      }
+      .ext-badge {
+        display: inline-block;
+        font-size: 0.58rem;
+        background: rgba(240,185,11,0.12);
+        color: var(--accent);
+        padding: 1px 7px;
+        border-radius: 4px;
+        font-weight: 700;
+        letter-spacing: 0.8px;
+        margin-bottom: 10px;
+      }
+      .fg-gauge-bg {
+        height: 6px;
+        border-radius: 3px;
+        background: linear-gradient(to right, #3165df, #848e9c, #f0b90b, #f6465d);
+        position: relative;
+        margin: 8px 0 4px;
+      }
+      .fg-needle {
+        position: absolute;
+        top: -4px;
+        width: 3px;
+        height: 14px;
+        background: #fff;
+        border-radius: 2px;
+        transform: translateX(-50%);
+        box-shadow: 0 0 4px rgba(255,255,255,0.4);
+        transition: left 0.6s ease;
+      }
+      .fg-labels {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.58rem;
+        color: var(--text-secondary);
+        margin-top: 3px;
+      }
+      .dom-bar-wrap {
+        height: 6px;
+        border-radius: 3px;
+        overflow: hidden;
+        display: flex;
+        margin: 8px 0 4px;
+      }
+      .dom-seg { height: 100%; }
+      .dom-legend {
+        display: flex;
+        gap: 10px;
+        font-size: 0.68rem;
+        color: var(--text-secondary);
+        margin-top: 2px;
+      }
+      .dom-dot {
+        display: inline-block;
+        width: 7px; height: 7px;
+        border-radius: 50%;
+        margin-right: 3px;
+        vertical-align: middle;
+      }
+      .refresh-label {
+        font-size: 0.62rem;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-top: 8px;
+      }
+      .refresh-dot {
+        display: inline-block;
+        width: 5px; height: 5px;
+        border-radius: 50%;
+        background: var(--whale-buy);
+        animation: blink 2s infinite;
+      }
+      @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
+      .kimchi-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.75rem;
+        padding: 3px 0;
+        border-bottom: 1px solid rgba(43,49,57,0.5);
+      }
+      .kimchi-row:last-of-type { border-bottom: none; }
+      .kimchi-exch { color: var(--text-secondary); }
+      .kimchi-price { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; }
+
       /* ── TIMEFRAME BUTTONS ── */
       .timeframe-bar {
         display: flex;
@@ -1553,6 +1645,47 @@
           </div>
         </div>
 
+        <!-- 외부 지표 (백로그 12·13·14) -->
+        <div class="ext-metrics">
+          <!-- 백로그 12: 공포&탐욕 -->
+          <div class="metric-card">
+            <div class="m-lbl">공포 &amp; 탐욕 지수</div>
+            <div id="fg_val" class="m-val" style="color:var(--accent)">--</div>
+            <div id="fg_class" class="delta" style="color:var(--accent)">--</div>
+            <div class="fg-gauge-bg"><div id="fg_needle" class="fg-needle" style="left:50%"></div></div>
+            <div class="fg-labels"><span>극단적 공포</span><span>중립</span><span>극단적 탐욕</span></div>
+            <div id="fg_delta" class="delta" style="margin-top:6px;color:var(--text-secondary);font-size:0.72rem">전일 대비 --</div>
+            <div class="refresh-label"><span class="refresh-dot"></span>5분마다 갱신</div>
+          </div>
+
+          <!-- 백로그 13: BTC 도미넌스 -->
+          <div class="metric-card">
+            <div class="m-lbl">비트코인 도미넌스</div>
+            <div id="dom_btc" class="m-val" style="color:var(--accent)">--%</div>
+            <div class="dom-bar-wrap">
+              <div id="dom_bar_btc" class="dom-seg" style="background:#f0b90b;opacity:0.85;width:50%"></div>
+              <div id="dom_bar_eth" class="dom-seg" style="background:#3165df;opacity:0.85;width:17%"></div>
+              <div id="dom_bar_etc" class="dom-seg" style="background:#848e9c;opacity:0.55;flex:1"></div>
+            </div>
+            <div class="dom-legend">
+              <span><span class="dom-dot" style="background:#f0b90b"></span>BTC <span id="dom_btc_pct">--%</span></span>
+              <span><span class="dom-dot" style="background:#3165df"></span>ETH <span id="dom_eth_pct">--%</span></span>
+              <span><span class="dom-dot" style="background:#848e9c"></span>기타 <span id="dom_etc_pct">--%</span></span>
+            </div>
+            <div class="refresh-label"><span class="refresh-dot"></span>5분마다 갱신</div>
+          </div>
+
+          <!-- 백로그 14: 김치 프리미엄 -->
+          <div class="metric-card">
+            <div class="m-lbl">김치 프리미엄</div>
+            <div id="kp_val" class="m-val">--%</div>
+            <div class="kimchi-row"><span class="kimchi-exch">업비트 (KRW)</span><span class="kimchi-price" id="kp_upbit">₩--</span></div>
+            <div class="kimchi-row"><span class="kimchi-exch">바이낸스 (환율)</span><span class="kimchi-price" id="kp_binance">₩--</span></div>
+            <div class="kimchi-row"><span class="kimchi-exch">환율</span><span class="kimchi-price" id="kp_rate" style="color:var(--text-secondary)">$1=₩--</span></div>
+            <div class="refresh-label"><span class="refresh-dot"></span>5분마다 갱신</div>
+          </div>
+        </div>
+
         <div class="timeframe-bar">
           <span class="tf-label">Timeframe</span>
           <button
@@ -2125,9 +2258,7 @@
       let exchangeRate = 1400;
       async function updateExchangeRate() {
         try {
-          const res = await fetch(
-            'https://api.exchangerate-api.com/v4/latest/USD',
-          );
+          const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
           const data = await res.json();
           if (data.rates && data.rates.KRW) {
             exchangeRate = data.rates.KRW;
@@ -2135,8 +2266,7 @@
               `실시간 환율: $1 = ₩${exchangeRate.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
           }
         } catch (e) {
-          document.getElementById('rate_display').innerText =
-            '실시간 환율: 정보 불가능';
+          document.getElementById('rate_display').innerText = '실시간 환율: 정보 불가능';
         }
       }
 
@@ -2572,6 +2702,7 @@
       function switchCoin() {
         const coin = document.getElementById('coin_select').value;
         currentCoin = coin;
+        livePrice = 0;
         const st = coinState[coin];
         openPrice = st.openPrice || 0;
         fullHistory = st.fullHistory;
@@ -2658,7 +2789,7 @@
             st.backfillInProgress = true;
             st.backfillBuffer.push(res.data);
             // 50청크마다 병합 후 차트 갱신 (이전 20청크 → 너무 잦음, 누적 데이터로 점점 무거워짐)
-            if (st.backfillBuffer.length >= 50) {
+            if (st.backfillBuffer.length >= 200) {
               const merged = st.backfillBuffer.flat().reverse();
               st.backfillBuffer = [];
               st.fullHistory = merged.concat(st.fullHistory);
@@ -2856,16 +2987,11 @@
           const res = await fetch(
             `${API_BASE}/whale/hourly/${coin}?threshold=${threshold}&days=${days}`,
           );
-          if (!res.ok) {
-            hint.textContent = '데이터 로드 실패';
-            return;
-          }
+          if (!res.ok) { hint.textContent = '데이터 로드 실패'; return; }
           whaleHourlyData = await res.json();
           renderHourlyChart(whaleHourlyData);
           hint.textContent = '막대 클릭 시 상세 표시';
-          document
-            .getElementById('hourly_detail_card')
-            .classList.remove('visible');
+          document.getElementById('hourly_detail_card').classList.remove('visible');
         } catch (e) {
           hint.textContent = '데이터 로드 실패';
         }
@@ -2944,27 +3070,16 @@
         const coin = document.getElementById('whale_coin').value;
         const threshold = document.getElementById('whale_threshold').value;
         try {
-          const res = await fetch(
-            `${API_BASE}/whale/dates/${coin}?threshold=${threshold}`,
-          );
+          const res = await fetch(`${API_BASE}/whale/dates/${coin}?threshold=${threshold}`);
           if (!res.ok) return;
           const dates = await res.json();
           const sel = document.getElementById('whale_date_select');
           const prev = sel.value;
           sel.innerHTML =
             '<option value="">날짜 선택...</option>' +
-            dates
-              .map(
-                (d) =>
-                  `<option value="${d}"${d === prev ? ' selected' : ''}>${d}</option>`,
-              )
-              .join('');
-          if (prev && dates.includes(prev)) {
-            loadWhaleLog();
-          } else if (dates.length > 0) {
-            sel.value = dates[0];
-            loadWhaleLog();
-          }
+            dates.map((d) => `<option value="${d}"${d === prev ? ' selected' : ''}>${d}</option>`).join('');
+          if (prev && dates.includes(prev)) { loadWhaleLog(); }
+          else if (dates.length > 0) { sel.value = dates[0]; loadWhaleLog(); }
         } catch (e) {}
       }
 
@@ -2974,9 +3089,7 @@
         const coin = document.getElementById('whale_coin').value;
         const threshold = document.getElementById('whale_threshold').value;
         try {
-          const res = await fetch(
-            `${API_BASE}/whale/daily-log/${coin}/${date}?threshold=${threshold}`,
-          );
+          const res = await fetch(`${API_BASE}/whale/daily-log/${coin}/${date}?threshold=${threshold}`);
           if (!res.ok) return;
           const data = await res.json();
           renderWhaleDateSummary(data);
@@ -3060,9 +3173,7 @@
         const body = document.getElementById('ai_predict_body');
         body.innerHTML = '<div class="ai-predict-loading">예측 중...</div>';
         try {
-          const res = await fetch(
-            `${API_BASE}/predict/price-after-whale?coin=${coin}`,
-          );
+          const res = await fetch(`${API_BASE}/predict/price-after-whale?coin=${coin}`);
           if (!res.ok) {
             const err = await res.json().catch(() => ({}));
             body.innerHTML = `<div class="ai-predict-empty">${err.detail || '예측 실패 — 모델 파일을 먼저 학습해주세요.'}</div>`;
@@ -3071,8 +3182,7 @@
           const data = await res.json();
           renderAiPrediction(data);
           document.getElementById('ai_predict_updated').textContent =
-            '업데이트: ' +
-            new Date().toLocaleTimeString('ko-KR', { hour12: false });
+            '업데이트: ' + new Date().toLocaleTimeString('ko-KR', { hour12: false });
         } catch (e) {
           body.innerHTML = '<div class="ai-predict-empty">서버 연결 실패</div>';
         }
@@ -3162,8 +3272,71 @@
         document.getElementById('ai_fixed_tooltip').style.display = 'none';
       }
 
+      function _fgColor(v) {
+        if (v <= 25) return '#3165df';
+        if (v <= 45) return '#848e9c';
+        if (v <= 55) return 'var(--text)';
+        if (v <= 75) return 'var(--accent)';
+        return '#f6465d';
+      }
+
+      function _applyFG(fg) {
+        const color = _fgColor(fg.value);
+        document.getElementById('fg_val').textContent = fg.value;
+        document.getElementById('fg_val').style.color = color;
+        document.getElementById('fg_class').textContent = fg.classification;
+        document.getElementById('fg_class').style.color = color;
+        document.getElementById('fg_needle').style.left = fg.value + '%';
+        if (fg.yesterday !== null) {
+          const diff = fg.value - fg.yesterday;
+          const sign = diff >= 0 ? '+' : '';
+          document.getElementById('fg_delta').textContent =
+            `전일 대비 ${sign}${diff} (어제 ${fg.yesterday})`;
+          document.getElementById('fg_delta').style.color = diff >= 0 ? '#f6465d' : '#3165df';
+        }
+      }
+
+      function _applyDom(dom) {
+        document.getElementById('dom_btc').textContent = dom.btc + '%';
+        document.getElementById('dom_btc_pct').textContent = dom.btc + '%';
+        document.getElementById('dom_eth_pct').textContent = dom.eth + '%';
+        document.getElementById('dom_etc_pct').textContent = dom.others + '%';
+        document.getElementById('dom_bar_btc').style.width = dom.btc + '%';
+        document.getElementById('dom_bar_eth').style.width = dom.eth + '%';
+      }
+
+      function _applyKP(kp) {
+        const pct = kp.premium_pct;
+        const pctEl = document.getElementById('kp_val');
+        pctEl.textContent = (pct !== null ? (pct >= 0 ? '+' : '') + pct + '%' : '--%');
+        pctEl.style.color = pct === null ? 'var(--text)' : pct >= 0 ? '#f6465d' : '#3165df';
+        document.getElementById('kp_upbit').textContent =
+          kp.upbit_price ? '₩' + Math.round(kp.upbit_price).toLocaleString() : '₩--';
+        document.getElementById('kp_binance').textContent =
+          kp.binance_krw ? '₩' + kp.binance_krw.toLocaleString() : '₩--';
+        document.getElementById('kp_rate').textContent =
+          kp.usd_krw ? `$1=₩${kp.usd_krw.toLocaleString()}` : '$1=₩--';
+      }
+
+      async function updateMarketIndicators() {
+        try {
+          const fg = await fetch(`${API_BASE}/market/fear-greed`).then(r => r.json());
+          _applyFG(fg);
+        } catch (e) {}
+        try {
+          const dom = await fetch(`${API_BASE}/market/dominance`).then(r => r.json());
+          _applyDom(dom);
+        } catch (e) {}
+        try {
+          const kp = await fetch(`${API_BASE}/market/kimchi-premium`).then(r => r.json());
+          _applyKP(kp);
+        } catch (e) {}
+      }
+
       updateExchangeRate();
       setInterval(updateExchangeRate, 60000);
+      updateMarketIndicators();
+      setInterval(updateMarketIndicators, 300000);
       checkAuth();
     </script>
 

@@ -626,6 +626,92 @@ async def inject_whale(coin: str = "KRW-BTC", side: str = "BID", amount: float =
     return {"ok": True, "sid": sid, "price": price, "amount": amount, "volume": volume}
 
 
+# ── 시장 외부 지표 캐시 (5분 TTL) ──
+_market_cache: dict = {}
+_MARKET_TTL = 300
+
+def _mcache_get(key):
+    entry = _market_cache.get(key)
+    if entry and time.time() < entry[1]:
+        return entry[0]
+    return None
+
+def _mcache_set(key, data):
+    _market_cache[key] = (data, time.time() + _MARKET_TTL)
+
+
+@app.get("/market/fear-greed")
+def get_fear_greed():
+    cached = _mcache_get("fear_greed")
+    if cached:
+        return cached
+    try:
+        res = requests.get("https://api.alternative.me/fng/?limit=2", timeout=5).json()
+        data_list = res["data"]
+        today = data_list[0]
+        yesterday = data_list[1] if len(data_list) > 1 else None
+        result = {
+            "value": int(today["value"]),
+            "classification": today["value_classification"],
+            "yesterday": int(yesterday["value"]) if yesterday else None,
+        }
+        _mcache_set("fear_greed", result)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"공포탐욕 API 오류: {e}")
+
+
+@app.get("/market/dominance")
+def get_dominance():
+    cached = _mcache_get("dominance")
+    if cached:
+        return cached
+    try:
+        res = requests.get("https://api.coingecko.com/api/v3/global", timeout=5).json()
+        mcp = res["data"]["market_cap_percentage"]
+        result = {
+            "btc": round(mcp.get("btc", 0), 2),
+            "eth": round(mcp.get("eth", 0), 2),
+            "others": round(100 - mcp.get("btc", 0) - mcp.get("eth", 0), 2),
+        }
+        _mcache_set("dominance", result)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"도미넌스 API 오류: {e}")
+
+
+@app.get("/market/kimchi-premium")
+def get_kimchi_premium():
+    cached = _mcache_get("kimchi")
+    if cached:
+        return cached
+    try:
+        conn = _db(); cur = conn.cursor()
+        cur.execute("SELECT price FROM trades WHERE code='KRW-BTC' ORDER BY timestamp DESC LIMIT 1")
+        row = cur.fetchone(); cur.close(); conn.close()
+        upbit_price = float(row[0]) if row else None
+
+        binance_res = requests.get("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT", timeout=5).json()
+        btc_usd = float(binance_res["price"])
+
+        rate_res = requests.get("https://api.exchangerate-api.com/v4/latest/USD", timeout=5).json()
+        usd_krw = float(rate_res["rates"]["KRW"])
+
+        binance_krw = btc_usd * usd_krw
+        premium = round((upbit_price / binance_krw - 1) * 100, 2) if upbit_price else None
+
+        result = {
+            "upbit_price": upbit_price,
+            "binance_krw": round(binance_krw),
+            "usd_krw": round(usd_krw),
+            "premium_pct": premium,
+        }
+        _mcache_set("kimchi", result)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"김치 프리미엄 API 오류: {e}")
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000, ws_ping_interval=None)

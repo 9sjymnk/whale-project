@@ -278,7 +278,7 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
         # (id 기반은 직접 백필한 데이터 - 큰 id, 오래된 timestamp - 를 못 잡음)
         async def backfill():
             try:
-                CHUNK = 10000
+                CHUNK = 2000
                 total_sent  = 0
                 chunk_idx   = 0
                 cur_ts = oldest_ts
@@ -317,17 +317,23 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
                         cur_id = rows[-1][4]
                         total_sent += len(rows)
                         chunk_idx  += 1
-                        await websocket.send_json({
-                            "type": "history_prepend",
-                            "data": data,
-                            "chunk": chunk_idx,
-                            "total_sent": total_sent,
-                        })
-                        await asyncio.sleep(0.02)
+                        try:
+                            await websocket.send_json({
+                                "type": "history_prepend",
+                                "data": data,
+                                "chunk": chunk_idx,
+                                "total_sent": total_sent,
+                            })
+                        except Exception:
+                            return  # 연결 끊기면 조용히 종료
+                        await asyncio.sleep(0.005)
                 finally:
                     cur2.close(); conn2.close()
 
-                await websocket.send_json({"type": "backfill_done", "total": total_sent})
+                try:
+                    await websocket.send_json({"type": "backfill_done", "total": total_sent})
+                except Exception:
+                    pass
             except Exception as e:
                 print(f"Backfill error: {e}")
 
@@ -349,83 +355,97 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
                 pass
         asyncio.create_task(_send_count())
 
-        # 업비트 WebSocket — 실패해도 백필은 살아남도록 별도 try/except + 재시도
+        # 업비트 WebSocket — Upbit 끊겨도 클라이언트 연결 유지하며 내부 재연결
         upbit_uri = "wss://api.upbit.com/websocket/v1"
-        upbit_ws = None
-        for attempt in range(5):
-            try:
-                upbit_ws = await asyncio.wait_for(
-                    websockets.connect(upbit_uri, ping_interval=None, ping_timeout=None, open_timeout=15),
-                    timeout=20
-                )
-                break
-            except Exception as ue:
-                print(f"[{coin}] Upbit connect attempt {attempt+1} failed: {type(ue).__name__}: {ue!r}")
-                await asyncio.sleep(3)
-        if upbit_ws is None:
-            print(f"[{coin}] Upbit 연결 포기 — 백필만 진행")
-            try:
-                await backfill_task
-            except Exception:
-                pass
-            return
+        sub = [{"ticket": "whale-watcher"}, {"type": "trade", "codes": [coin], "isOnlyRealtime": True}, {"format": "SIMPLE"}]
 
-        async with upbit_ws:
-            sub = [{"ticket": "whale-watcher"}, {"type": "trade", "codes": [coin], "isOnlyRealtime": True}, {"format": "SIMPLE"}]
-            await upbit_ws.send(json.dumps(sub))
-
-            while True:
-                now_kst = datetime.now(timezone(timedelta(hours=9)))
-
-                # 오전 9시 기준 날짜 변경 시 기준가 갱신 로직 유지
-                if now_kst.date() != last_update_date and now_kst.hour >= 9:
-                    open_price = get_official_open_price(coin)
-                    last_update_date = now_kst.date()
-
+        while True:
+            upbit_ws = None
+            for attempt in range(5):
                 try:
-                    raw = await asyncio.wait_for(upbit_ws.recv(), timeout=15)
-                except asyncio.TimeoutError:
+                    upbit_ws = await asyncio.wait_for(
+                        websockets.connect(upbit_uri, ping_interval=None, ping_timeout=None, open_timeout=15),
+                        timeout=20
+                    )
+                    break
+                except Exception as ue:
+                    print(f"[{coin}] Upbit connect attempt {attempt+1} failed: {ue!r}")
+                    await asyncio.sleep(3)
+
+            if upbit_ws is None:
+                print(f"[{coin}] Upbit 연결 실패 — 15초 후 재시도")
+                try:
                     await websocket.send_json({"type": "heartbeat"})
-                    continue
-                data = json.loads(raw)
+                except Exception:
+                    return  # 클라이언트도 끊기면 종료
+                await asyncio.sleep(15)
+                continue
 
-                price      = float(data.get('tp', 0))
-                volume     = float(data.get('tv', 0))
-                side       = data.get('ab', '')
-                amount     = price * volume
-                pcp        = float(data.get('pcp', price))
-                change_dir = data.get('c', '')
-                sid        = data.get('sid')
-                ts         = datetime.now(timezone(timedelta(hours=9)))
+            try:
+                async with upbit_ws:
+                    await upbit_ws.send(json.dumps(sub))
 
-                # DB에 저장 (기존 기능 유지 - 히스토리 누적)
-                trade_id = None
-                try:
-                    conn = psycopg2.connect(**DB_CONFIG); cur = conn.cursor()
-                    cur.execute("""
-                        INSERT INTO trades (timestamp, code, price, volume, side, total_amount, pcp, change, sid)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (sid, code) DO NOTHING
-                        RETURNING id
-                    """, (ts, coin, price, volume, side, amount, pcp, change_dir, sid))
-                    row = cur.fetchone()
-                    if row:
-                        trade_id = row[0]
-                    conn.commit(); cur.close(); conn.close(); conn = None
-                except Exception as db_err:
-                    print(f"DB insert error: {db_err}")
-                    if conn: conn.close(); conn = None
+                    while True:
+                        now_kst = datetime.now(timezone(timedelta(hours=9)))
+                        if now_kst.date() != last_update_date and now_kst.hour >= 9:
+                            open_price = get_official_open_price(coin)
+                            last_update_date = now_kst.date()
 
-                # 실시간 틱 데이터 전송
-                await websocket.send_json({
-                    "type": "tick",
-                    "price": price,
-                    "amount": amount,
-                    "side": side,
-                    "time": int(ts.timestamp()) + 32400,  # KST 보정 유지
-                    "id": trade_id,
-                    "open_price": open_price
-                })
+                        try:
+                            raw = await asyncio.wait_for(upbit_ws.recv(), timeout=15)
+                        except asyncio.TimeoutError:
+                            try:
+                                await websocket.send_json({"type": "heartbeat"})
+                            except Exception:
+                                return
+                            continue
+                        except Exception:
+                            break  # Upbit 끊김 → 내부 루프 탈출 후 재연결
+
+                        data = json.loads(raw)
+                        price      = float(data.get('tp', 0))
+                        volume     = float(data.get('tv', 0))
+                        side       = data.get('ab', '')
+                        amount     = price * volume
+                        pcp        = float(data.get('pcp', price))
+                        change_dir = data.get('c', '')
+                        sid        = data.get('sid')
+                        ts         = datetime.now(timezone(timedelta(hours=9)))
+
+                        trade_id = None
+                        try:
+                            conn = psycopg2.connect(**DB_CONFIG); cur = conn.cursor()
+                            cur.execute("""
+                                INSERT INTO trades (timestamp, code, price, volume, side, total_amount, pcp, change, sid)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                ON CONFLICT (sid, code) DO NOTHING
+                                RETURNING id
+                            """, (ts, coin, price, volume, side, amount, pcp, change_dir, sid))
+                            row = cur.fetchone()
+                            if row:
+                                trade_id = row[0]
+                            conn.commit(); cur.close(); conn.close(); conn = None
+                        except Exception as db_err:
+                            print(f"DB insert error: {db_err}")
+                            if conn: conn.close(); conn = None
+
+                        try:
+                            await websocket.send_json({
+                                "type": "tick",
+                                "price": price,
+                                "amount": amount,
+                                "side": side,
+                                "time": int(ts.timestamp()) + 32400,
+                                "id": trade_id,
+                                "open_price": open_price
+                            })
+                        except Exception:
+                            return
+
+            except Exception as ue:
+                print(f"[{coin}] Upbit dropped: {ue!r} — reconnecting")
+
+            await asyncio.sleep(1)  # 잠깐 후 Upbit 재연결
 
     except WebSocketDisconnect:
         print(f"INFO: WebSocket for {coin} closed by client.")
@@ -686,6 +706,92 @@ async def inject_whale(coin: str = "KRW-BTC", side: str = "BID", amount: float =
         return {"ok": True, "sid": sid, "price": price, "amount": amount, "volume": volume}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── 시장 외부 지표 캐시 (5분 TTL) ──
+_market_cache: dict = {}
+_MARKET_TTL = 300
+
+def _mcache_get(key):
+    entry = _market_cache.get(key)
+    if entry and time.time() < entry[1]:
+        return entry[0]
+    return None
+
+def _mcache_set(key, data):
+    _market_cache[key] = (data, time.time() + _MARKET_TTL)
+
+
+@app.get("/market/fear-greed")
+def get_fear_greed():
+    cached = _mcache_get("fear_greed")
+    if cached:
+        return cached
+    try:
+        res = requests.get("https://api.alternative.me/fng/?limit=2", timeout=5).json()
+        data_list = res["data"]
+        today = data_list[0]
+        yesterday = data_list[1] if len(data_list) > 1 else None
+        result = {
+            "value": int(today["value"]),
+            "classification": today["value_classification"],
+            "yesterday": int(yesterday["value"]) if yesterday else None,
+        }
+        _mcache_set("fear_greed", result)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"공포탐욕 API 오류: {e}")
+
+
+@app.get("/market/dominance")
+def get_dominance():
+    cached = _mcache_get("dominance")
+    if cached:
+        return cached
+    try:
+        res = requests.get("https://api.coingecko.com/api/v3/global", timeout=5).json()
+        mcp = res["data"]["market_cap_percentage"]
+        result = {
+            "btc": round(mcp.get("btc", 0), 2),
+            "eth": round(mcp.get("eth", 0), 2),
+            "others": round(100 - mcp.get("btc", 0) - mcp.get("eth", 0), 2),
+        }
+        _mcache_set("dominance", result)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"도미넌스 API 오류: {e}")
+
+
+@app.get("/market/kimchi-premium")
+def get_kimchi_premium():
+    cached = _mcache_get("kimchi")
+    if cached:
+        return cached
+    try:
+        conn = _db(); cur = conn.cursor()
+        cur.execute("SELECT price FROM trades WHERE code='KRW-BTC' ORDER BY timestamp DESC LIMIT 1")
+        row = cur.fetchone(); cur.close(); conn.close()
+        upbit_price = float(row[0]) if row else None
+
+        binance_res = requests.get("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT", timeout=5).json()
+        btc_usd = float(binance_res["price"])
+
+        rate_res = requests.get("https://api.exchangerate-api.com/v4/latest/USD", timeout=5).json()
+        usd_krw = float(rate_res["rates"]["KRW"])
+
+        binance_krw = btc_usd * usd_krw
+        premium = round((upbit_price / binance_krw - 1) * 100, 2) if upbit_price else None
+
+        result = {
+            "upbit_price": upbit_price,
+            "binance_krw": round(binance_krw),
+            "usd_krw": round(usd_krw),
+            "premium_pct": premium,
+        }
+        _mcache_set("kimchi", result)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"김치 프리미엄 API 오류: {e}")
 
 
 if __name__ == "__main__":
