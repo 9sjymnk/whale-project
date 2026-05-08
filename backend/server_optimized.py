@@ -105,6 +105,10 @@ def create_users_table():
             kakao_token TEXT
         )
     """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_trades_code_ts_id
+        ON trades (code, timestamp DESC, id DESC)
+    """)
     conn.commit(); cur.close(); conn.close()
 
 
@@ -277,19 +281,19 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
         # ── Phase 2: 7일치 데이터를 timestamp 기반 페이지네이션으로 백그라운드 전송 ──
         # (id 기반은 직접 백필한 데이터 - 큰 id, 오래된 timestamp - 를 못 잡음)
         async def backfill():
-            try:
-                CHUNK = 2000
-                total_sent  = 0
-                chunk_idx   = 0
-                cur_ts = oldest_ts
-                cur_id = oldest_id
+            CHUNK = 5000
+            queue = asyncio.Queue(maxsize=4)
+            loop  = asyncio.get_running_loop()
 
-                conn2 = psycopg2.connect(**DB_CONFIG)
-                cur2  = conn2.cursor()
+            def _run_all():
+                # 커넥션 1개로 전체 백필 — 스레드 안에서 실행
                 try:
+                    c2 = psycopg2.connect(**DB_CONFIG); cu2 = c2.cursor()
+                    ts, rid = oldest_ts, oldest_id
+                    total = 0; idx = 0
                     while True:
-                        if cur_ts is not None:
-                            cur2.execute("""
+                        if ts is not None:
+                            cu2.execute("""
                                 SELECT price, total_amount, side, timestamp, id
                                 FROM trades
                                 WHERE code = %s
@@ -297,45 +301,55 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
                                   AND timestamp >= NOW() - INTERVAL '7 days'
                                 ORDER BY timestamp DESC, id DESC
                                 LIMIT %s
-                            """, (coin, cur_ts, cur_id, CHUNK))
+                            """, (coin, ts, rid, CHUNK))
                         else:
-                            cur2.execute("""
+                            cu2.execute("""
                                 SELECT price, total_amount, side, timestamp, id
                                 FROM trades
                                 WHERE code = %s AND timestamp >= NOW() - INTERVAL '7 days'
                                 ORDER BY timestamp DESC, id DESC
                                 LIMIT %s
                             """, (coin, CHUNK))
-
-                        rows = cur2.fetchall()
+                        rows = cu2.fetchall()
                         if not rows:
                             break
-
+                        ts  = rows[-1][3]
+                        rid = rows[-1][4]
+                        total += len(rows)
+                        idx  += 1
                         data = [{"price": float(r[0]), "amount": float(r[1]), "side": r[2],
-                                 "time": int(r[3].timestamp()) + 32400, "id": r[4]} for r in rows]
-                        cur_ts = rows[-1][3]
-                        cur_id = rows[-1][4]
-                        total_sent += len(rows)
-                        chunk_idx  += 1
-                        try:
-                            await websocket.send_json({
-                                "type": "history_prepend",
-                                "data": data,
-                                "chunk": chunk_idx,
-                                "total_sent": total_sent,
-                            })
-                        except Exception:
-                            return  # 연결 끊기면 조용히 종료
-                        await asyncio.sleep(0.005)
+                                 "time": int(r[3].timestamp()) + 32400} for r in rows]
+                        # 큐가 꽉 차면 전송이 따라올 때까지 블로킹 (백프레셔)
+                        asyncio.run_coroutine_threadsafe(queue.put((data, idx, total)), loop).result()
+                    asyncio.run_coroutine_threadsafe(queue.put(None), loop).result()
+                except Exception as e:
+                    print(f"Backfill thread error: {e}")
+                    asyncio.run_coroutine_threadsafe(queue.put(None), loop).result()
                 finally:
-                    cur2.close(); conn2.close()
+                    cu2.close(); c2.close()
 
+            loop.run_in_executor(None, _run_all)
+
+            total_sent = 0
+            while True:
+                item = await queue.get()
+                if item is None:
+                    break
+                data, chunk_idx, total_sent = item
                 try:
-                    await websocket.send_json({"type": "backfill_done", "total": total_sent})
+                    await websocket.send_json({
+                        "type": "history_prepend",
+                        "data": data,
+                        "chunk": chunk_idx,
+                        "total_sent": total_sent,
+                    })
                 except Exception:
-                    pass
-            except Exception as e:
-                print(f"Backfill error: {e}")
+                    return  # 연결 끊기면 조용히 종료
+
+            try:
+                await websocket.send_json({"type": "backfill_done", "total": total_sent})
+            except Exception:
+                pass
 
         # 백필은 Upbit 연결 기다리지 않고 즉시 시작 (Upbit 실패해도 과거 데이터는 떠야 함)
         backfill_task = asyncio.create_task(backfill())
@@ -466,8 +480,43 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
             pass
 
 
+_daily_cache: dict = {}  # coin → (fetched_at, data)
+
 @app.get("/daily/{coin}")
 def get_daily(coin: str):
+    import time as _t
+    now = _t.time()
+    cached = _daily_cache.get(coin)
+    if cached and now - cached[0] < 60:
+        return cached[1]
+
+    # 업비트 일봉 API (이미 집계된 데이터 — DB 풀스캔 불필요)
+    try:
+        resp = requests.get(
+            f"https://api.upbit.com/v1/candles/days?market={coin}&count=41",
+            timeout=3,
+        ).json()
+        result = []
+        for i, r in enumerate(resp):
+            prev_close = float(resp[i + 1]["trade_price"]) if i + 1 < len(resp) else None
+            close = float(r["trade_price"])
+            change_pct = round((close - prev_close) / prev_close * 100, 2) if prev_close else 0.0
+            result.append({
+                "date":       r["candle_date_time_kst"][:10],
+                "open":       float(r["opening_price"]),
+                "high":       float(r["high_price"]),
+                "low":        float(r["low_price"]),
+                "close":      close,
+                "volume":     float(r["candle_acc_trade_volume"]),
+                "change_pct": change_pct,
+            })
+        result = result[:40]
+        _daily_cache[coin] = (now, result)
+        return result
+    except Exception:
+        pass
+
+    # 폴백: DB 직접 집계
     conn = _db(); cur = conn.cursor()
     cur.execute("""
         SELECT
@@ -498,7 +547,9 @@ def get_daily(coin: str):
             "volume":     float(r[5]),
             "change_pct": change_pct,
         })
-    return result[:40]
+    result = result[:40]
+    _daily_cache[coin] = (now, result)
+    return result
 
 
 @app.get("/whale/hourly/{coin}")

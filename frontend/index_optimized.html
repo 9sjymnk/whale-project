@@ -2029,7 +2029,7 @@
           initChart();
           connectAllCoins();
           loadDaily();
-          _startAiPredictAutoRefresh();
+          loadAiPrediction();
         }
         if (page === 'whale' && !whaleAnalysisLoaded) {
           whaleAnalysisLoaded = true;
@@ -2299,6 +2299,8 @@
           backfillDone: false,
           totalRecords: 0,
           openPrice: 0,
+          dailyData: null,
+          dailyFetchedAt: 0,
         };
       });
 
@@ -2706,11 +2708,17 @@
         const st = coinState[coin];
         openPrice = st.openPrice || 0;
         fullHistory = st.fullHistory;
-        dailyData = [];
         dailyExpanded = false;
         initChart();
         refreshUI();
-        loadDaily();
+        // 60초 이내 캐시 있으면 즉시 렌더링, 없으면 fetch
+        if (st.dailyData && Date.now() - st.dailyFetchedAt < 60000) {
+          dailyData = st.dailyData;
+          renderDaily();
+        } else {
+          dailyData = [];
+          loadDaily();
+        }
         loadAiPrediction();
         _updateBackfillStatus(coin);
       }
@@ -2788,18 +2796,6 @@
           } else if (res.type === 'history_prepend') {
             st.backfillInProgress = true;
             st.backfillBuffer.push(res.data);
-            // 50청크마다 병합 후 차트 갱신 (이전 20청크 → 너무 잦음, 누적 데이터로 점점 무거워짐)
-            if (st.backfillBuffer.length >= 200) {
-              const merged = st.backfillBuffer.flat().reverse();
-              st.backfillBuffer = [];
-              st.fullHistory = merged.concat(st.fullHistory);
-              if (coin === currentCoin) {
-                fullHistory = st.fullHistory;
-                // requestAnimationFrame으로 다음 프레임에 그리기 → 사용자 액션 우선
-                requestAnimationFrame(() => refreshChartOnly());
-              }
-            }
-            // 현재 보고있는 코인이면 진행률 표시
             if (coin === currentCoin) {
               const el = document.getElementById('backfill_status');
               el.style.display = 'block';
@@ -2884,6 +2880,8 @@
           const res = await fetch(`${API_BASE}/daily/${coin}`);
           if (!res.ok) return;
           dailyData = await res.json();
+          coinState[coin].dailyData = dailyData;
+          coinState[coin].dailyFetchedAt = Date.now();
           renderDaily();
         } catch (e) {}
       }
@@ -3166,7 +3164,6 @@
       }
 
       // ── AI 예측 ──
-      let aiPredictTimer = null;
 
       async function loadAiPrediction() {
         const coin = document.getElementById('coin_select').value;
@@ -3250,12 +3247,6 @@
           `</div>` +
           whaleFooter;
         document.getElementById('ai_predict_body').innerHTML = html;
-      }
-
-      function _startAiPredictAutoRefresh() {
-        if (aiPredictTimer) clearInterval(aiPredictTimer);
-        loadAiPrediction();
-        aiPredictTimer = setInterval(loadAiPrediction, 5 * 60 * 1000); // 5분마다
       }
 
       // ── AI 툴팁 (fixed 레이어) ──
