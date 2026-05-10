@@ -2346,6 +2346,7 @@
         currentInterval = 1,
         chartType = 'line';
       let fullHistory = [],
+        oldCandles = [],
         buyVol = 0,
         totalVol = 0,
         buyCnt = 0;
@@ -2443,8 +2444,22 @@
       }
 
       function buildChartData() {
+        const iv = Math.max(currentInterval, 60); // 구형 캔들은 최소 1분 단위
         if (chartType === 'candle') {
           const buckets = new Map();
+          // 7일 이전 집계 캔들 먼저 삽입
+          oldCandles.forEach((c) => {
+            const t = Math.floor(c.time / iv) * iv;
+            if (!buckets.has(t)) {
+              buckets.set(t, { open: c.open, high: c.high, low: c.low, close: c.close });
+            } else {
+              const b = buckets.get(t);
+              b.high = Math.max(b.high, c.high);
+              b.low  = Math.min(b.low,  c.low);
+              b.close = c.close;
+            }
+          });
+          // 최근 7일 raw 틱으로 덮어씀
           fullHistory.forEach((d) => {
             const t = Math.floor(d.time / currentInterval) * currentInterval;
             const p = d.price;
@@ -2453,7 +2468,7 @@
             } else {
               const b = buckets.get(t);
               b.high = Math.max(b.high, p);
-              b.low = Math.min(b.low, p);
+              b.low  = Math.min(b.low,  p);
               b.close = p;
             }
           });
@@ -2461,14 +2476,19 @@
             .sort((a, b) => a[0] - b[0])
             .map(([t, v]) => ({
               time: t,
-              open: currentCurrency === 'USD' ? v.open / exchangeRate : v.open,
-              high: currentCurrency === 'USD' ? v.high / exchangeRate : v.high,
-              low: currentCurrency === 'USD' ? v.low / exchangeRate : v.low,
-              close:
-                currentCurrency === 'USD' ? v.close / exchangeRate : v.close,
+              open:  currentCurrency === 'USD' ? v.open  / exchangeRate : v.open,
+              high:  currentCurrency === 'USD' ? v.high  / exchangeRate : v.high,
+              low:   currentCurrency === 'USD' ? v.low   / exchangeRate : v.low,
+              close: currentCurrency === 'USD' ? v.close / exchangeRate : v.close,
             }));
         } else {
           const buckets = new Map();
+          // 7일 이전 집계 캔들 close 가격으로 삽입
+          oldCandles.forEach((c) => {
+            const t = Math.floor(c.time / iv) * iv;
+            buckets.set(t, c.close);
+          });
+          // 최근 7일 raw 틱으로 덮어씀
           fullHistory.forEach((d) => {
             const t = Math.floor(d.time / currentInterval) * currentInterval;
             buckets.set(t, d.price);
@@ -2754,6 +2774,7 @@
         if (currentCoin && fullHistory.length > 0) {
           coinCache[currentCoin] = {
             history: fullHistory.slice(),
+            oldCandles: oldCandles.slice(),
             backfillDone: backfillIsDone,
           };
         }
@@ -2771,9 +2792,11 @@
         const cached = coinCache[newCoin];
         if (cached) {
           fullHistory = cached.history.slice();
+          oldCandles = (cached.oldCandles || []).slice();
           backfillIsDone = cached.backfillDone;
         } else {
           fullHistory = [];
+          oldCandles = [];
         }
 
         dailyData = [];
@@ -2808,7 +2831,11 @@
           const res = JSON.parse(e.data);
           if (res.type === 'heartbeat') return;
           if (res.open_price) openPrice = res.open_price;
-          if (res.type === 'history') {
+          if (res.type === 'history_old') {
+            if (!coinCache[coin]) {
+              oldCandles = res.data;
+            }
+          } else if (res.type === 'history') {
             if (!coinCache[coin]) {
               fullHistory = res.data;
               refreshUI();

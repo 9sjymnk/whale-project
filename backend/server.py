@@ -252,22 +252,41 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
         open_price = get_official_open_price(coin)
         last_update_date = datetime.now(timezone(timedelta(hours=9))).date()
 
-        # [기존 기능 유지] 초기 히스토리 데이터 로드
+        # 초기 히스토리 데이터 로드
         conn = psycopg2.connect(**DB_CONFIG); cur = conn.cursor()
-        cur.execute(f"SELECT price, total_amount, side, timestamp, id FROM trades WHERE code='{coin}' ORDER BY timestamp ASC, id ASC")
-        history = cur.fetchall()
-        
-        history_list = []
-        for h in history:
-            history_list.append({
-                "price": float(h[0]), 
-                "amount": float(h[1]), 
-                "side": h[2], 
-                "time": int(h[3].timestamp()) + 32400, # KST 보정 유지
-                "id": h[4]
-            })
-        
-        # 클라이언트에 초기 데이터 전송
+
+        # 7일 이전: 1분 OHLCV 캔들로 집계 (데이터 전송량 대폭 감소)
+        cur.execute("""
+            SELECT
+                EXTRACT(EPOCH FROM date_trunc('minute', timestamp))::int AS t,
+                (array_agg(price ORDER BY timestamp ASC))[1]  AS open,
+                MAX(price)                                     AS high,
+                MIN(price)                                     AS low,
+                (array_agg(price ORDER BY timestamp DESC))[1] AS close
+            FROM trades
+            WHERE code = %s AND timestamp < NOW() - INTERVAL '7 days'
+            GROUP BY date_trunc('minute', timestamp)
+            ORDER BY t ASC
+        """, (coin,))
+        old_candles = [
+            {"time": int(r[0]) + 32400, "open": float(r[1]), "high": float(r[2]), "low": float(r[3]), "close": float(r[4])}
+            for r in cur.fetchall()
+        ]
+
+        # 최근 7일: raw 틱 (고래 마커 표시용)
+        cur.execute("""
+            SELECT price, total_amount, side, timestamp, id
+            FROM trades
+            WHERE code = %s AND timestamp >= NOW() - INTERVAL '7 days'
+            ORDER BY timestamp ASC, id ASC
+        """, (coin,))
+        history_list = [
+            {"price": float(h[0]), "amount": float(h[1]), "side": h[2], "time": int(h[3].timestamp()) + 32400, "id": h[4]}
+            for h in cur.fetchall()
+        ]
+
+        # 클라이언트에 초기 데이터 전송 (old candles 먼저, raw ticks 나중)
+        await websocket.send_json({"type": "history_old", "data": old_candles, "open_price": open_price})
         await websocket.send_json({"type": "history", "data": history_list, "open_price": open_price})
         
         cur.close(); conn.close()
