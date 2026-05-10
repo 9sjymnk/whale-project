@@ -2351,6 +2351,12 @@
         buyVol = 0,
         totalVol = 0,
         buyCnt = 0;
+      let rafPending = false;
+      function scheduleRefreshUI() {
+        if (rafPending) return;
+        rafPending = true;
+        requestAnimationFrame(() => { rafPending = false; refreshUI(); });
+      }
       let currentCurrency = 'KRW';
       let whaleLogCache = [],
         logExpanded = false,
@@ -2881,8 +2887,7 @@
               _triggerSlackWhale(coin, res.side, res.price, res.amount, res.time);
             }
             updateMetrics(res.price);
-            refreshUI();
-            renderDaily();
+            scheduleRefreshUI();
           }
         };
         socket.onclose = () => {
@@ -3270,8 +3275,6 @@
         const token = localStorage.getItem('whale_token');
         if (!token) return;
         const now = Date.now();
-        if (now - (_slackCooldown[coin] || 0) < 60000) return;
-        _slackCooldown[coin] = now;
         const _now = new Date();
         const dateStr = _now.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
         const timeStr = _now.toLocaleTimeString('ko-KR', { hour12: false });
