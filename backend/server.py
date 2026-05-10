@@ -381,8 +381,6 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
 
     finally:
         manager.remove(coin, websocket)
-
-    finally:
         if conn:
             conn.close()
 
