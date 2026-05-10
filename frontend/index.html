@@ -2014,8 +2014,9 @@
     <script>
       // ?port=8001 로 열면 최적화 서버에 연결 (데모용)
       const _port = new URLSearchParams(location.search).get('port') || '8000';
-      const API_BASE = `http://localhost:${_port}`;
-      const WS_BASE = `ws://localhost:${_port}`;
+      const _host = new URLSearchParams(location.search).get('host') || 'localhost';
+      const API_BASE = `http://${_host}:${_port}`;
+      const WS_BASE = `ws://${_host}:${_port}`;
 
       // ── 페이지 전환 ──
       let wsStarted = false;
