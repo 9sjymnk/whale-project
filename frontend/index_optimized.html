@@ -2003,8 +2003,10 @@
     </div>
 
     <script>
-      const API_BASE = 'http://localhost:8081';
-      const WS_BASE = 'ws://localhost:8081';
+      const _host = new URLSearchParams(location.search).get('host') || 'localhost';
+      const _port = new URLSearchParams(location.search).get('port') || '8081';
+      const API_BASE = `http://${_host}:${_port}`;
+      const WS_BASE = `ws://${_host}:${_port}`;
 
       // ── 페이지 전환 ──
       let wsStarted = false;
