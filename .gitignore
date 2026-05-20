@@ -1,3 +1,4 @@
+docs/
 *.pem
 backend/.git/
 __pycache__/
