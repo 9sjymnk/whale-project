@@ -1707,15 +1707,15 @@
           <button class="chart-btn" id="btn_1m" onclick="changeTimeframe(60)">
             1분
           </button>
+          <button class="chart-btn" id="btn_5m" onclick="changeTimeframe(300)">
+            5분
+          </button>
           <button
             class="chart-btn"
             id="btn_30m"
             onclick="changeTimeframe(1800)"
           >
             30분
-          </button>
-          <button class="chart-btn" id="btn_1h" onclick="changeTimeframe(3600)">
-            1시간
           </button>
           <div class="tf-divider"></div>
           <span class="tf-label">차트</span>
@@ -2422,7 +2422,7 @@
 
       function changeTimeframe(sec) {
         currentInterval = sec;
-        ['btn_1s', 'btn_1m', 'btn_30m', 'btn_1h'].forEach((id) =>
+        ['btn_1s', 'btn_1m', 'btn_5m', 'btn_30m'].forEach((id) =>
           document.getElementById(id).classList.remove('active'),
         );
         const btnId =
@@ -2430,9 +2430,9 @@
             ? 'btn_1s'
             : sec === 60
               ? 'btn_1m'
-              : sec === 1800
-                ? 'btn_30m'
-                : 'btn_1h';
+              : sec === 300
+                ? 'btn_5m'
+                : 'btn_30m';
         document.getElementById(btnId).classList.add('active');
         chart.applyOptions({ timeScale: { secondsVisible: sec === 1 } });
         refreshUI();

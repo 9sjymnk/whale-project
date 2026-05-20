@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from jose import JWTError, jwt
 import bcrypt
-import asyncio, psycopg2, requests, json, os, websockets, pickle, numpy as np, time
+import asyncio, psycopg2, requests, json, os, websockets, pickle, numpy as np, time, threading
 from datetime import datetime, timezone, timedelta
 
 # 1. 환경 변수 로드
@@ -109,7 +109,43 @@ def create_users_table():
         CREATE INDEX IF NOT EXISTS idx_trades_code_ts_id
         ON trades (code, timestamp DESC, id DESC)
     """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS backtest_log (
+            id           SERIAL PRIMARY KEY,
+            coin         VARCHAR(20)  NOT NULL,
+            timestamp    TIMESTAMPTZ  NOT NULL,
+            price        NUMERIC      NOT NULL,
+            side         VARCHAR(5)   NOT NULL,
+            total_amount NUMERIC      NOT NULL,
+            direction_1m  VARCHAR(4),
+            direction_5m  VARCHAR(4),
+            direction_30m VARCHAR(4),
+            UNIQUE (coin, timestamp)
+        )
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_backtest_log_coin_ts
+        ON backtest_log (coin, timestamp ASC)
+    """)
     conn.commit(); cur.close(); conn.close()
+
+    def _build_covering_index():
+        try:
+            c = psycopg2.connect(**DB_CONFIG)
+            c.autocommit = True
+            with c.cursor() as cx:
+                cx.execute("""
+                    CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_trades_backtest_covering
+                    ON trades (code, timestamp) INCLUDE (price, side, total_amount, volume)
+                """)
+            c.close()
+            print("[startup] backtest covering index ready")
+        except Exception as e:
+            print(f"[startup] covering index error: {e}")
+
+    threading.Thread(target=_build_covering_index, daemon=True).start()
+
+    threading.Thread(target=_backfill_backtest_log, daemon=True).start()
 
 
 @app.post("/auth/register")
@@ -246,14 +282,9 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
         last_update_date = datetime.now(timezone(timedelta(hours=9))).date()
 
         # ── Phase 1: 최근 500건만 즉시 전송 → 연결 완료 + 차트 즉시 표시 ──
-        _s = _t.monotonic()
         conn = psycopg2.connect(**DB_CONFIG); cur = conn.cursor()
-        print(f"[{coin}] db connect: {_t.monotonic()-_s:.2f}s")
-
-        # COUNT는 백그라운드로 → Phase 1 안 막음, 결과 도착하면 별도 메시지로 전송
         total_records = 0
 
-        _s = _t.monotonic()
         cur.execute("""
             SELECT price, total_amount, side, timestamp, id
             FROM (
@@ -263,7 +294,6 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
             ) sub ORDER BY timestamp ASC, id ASC
         """, (coin,))
         initial_rows = cur.fetchall()
-        print(f"[{coin}] Phase1 SELECT: {_t.monotonic()-_s:.2f}s")
         cur.close(); conn.close(); conn = None
 
         oldest_ts = initial_rows[0][3] if initial_rows else None
@@ -279,38 +309,60 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
         })
 
         # ── Phase 2: 7일치 데이터를 timestamp 기반 페이지네이션으로 백그라운드 전송 ──
-        # (id 기반은 직접 백필한 데이터 - 큰 id, 오래된 timestamp - 를 못 잡음)
         async def backfill():
             CHUNK = 5000
             queue = asyncio.Queue(maxsize=4)
             loop  = asyncio.get_running_loop()
 
             def _run_all():
-                # 커넥션 1개로 전체 백필 — 스레드 안에서 실행
+                c2 = None; cu2 = None
+
+                def _connect_backfill():
+                    nonlocal c2, cu2
+                    if c2 is not None:
+                        try: c2.close()
+                        except: pass
+                    c2 = psycopg2.connect(**DB_CONFIG)
+                    cu2 = c2.cursor()
+
                 try:
-                    c2 = psycopg2.connect(**DB_CONFIG); cu2 = c2.cursor()
+                    _connect_backfill()
                     ts, rid = oldest_ts, oldest_id
                     total = 0; idx = 0
+                    MAX_RETRIES = 5
                     while True:
-                        if ts is not None:
-                            cu2.execute("""
-                                SELECT price, total_amount, side, timestamp, id
-                                FROM trades
-                                WHERE code = %s
-                                  AND (timestamp, id) < (%s, %s)
-                                  AND timestamp >= NOW() - INTERVAL '7 days'
-                                ORDER BY timestamp DESC, id DESC
-                                LIMIT %s
-                            """, (coin, ts, rid, CHUNK))
-                        else:
-                            cu2.execute("""
-                                SELECT price, total_amount, side, timestamp, id
-                                FROM trades
-                                WHERE code = %s AND timestamp >= NOW() - INTERVAL '7 days'
-                                ORDER BY timestamp DESC, id DESC
-                                LIMIT %s
-                            """, (coin, CHUNK))
-                        rows = cu2.fetchall()
+                        rows = None
+                        for attempt in range(MAX_RETRIES):
+                            try:
+                                if ts is not None:
+                                    cu2.execute("""
+                                        SELECT price, total_amount, side, timestamp, id
+                                        FROM trades
+                                        WHERE code = %s
+                                          AND (timestamp, id) < (%s, %s)
+                                          AND timestamp >= NOW() - INTERVAL '7 days'
+                                        ORDER BY timestamp DESC, id DESC
+                                        LIMIT %s
+                                    """, (coin, ts, rid, CHUNK))
+                                else:
+                                    cu2.execute("""
+                                        SELECT price, total_amount, side, timestamp, id
+                                        FROM trades
+                                        WHERE code = %s AND timestamp >= NOW() - INTERVAL '7 days'
+                                        ORDER BY timestamp DESC, id DESC
+                                        LIMIT %s
+                                    """, (coin, CHUNK))
+                                rows = cu2.fetchall()
+                                break
+                            except Exception as e:
+                                print(f"[{coin}] Backfill error (attempt {attempt+1}/{MAX_RETRIES}): {e}")
+                                if attempt + 1 < MAX_RETRIES:
+                                    time.sleep(min(2 ** attempt, 30))
+                                    _connect_backfill()
+                        if rows is None:
+                            print(f"[{coin}] Backfill 재시도 초과 — 중단")
+                            asyncio.run_coroutine_threadsafe(queue.put(None), loop).result()
+                            return
                         if not rows:
                             break
                         ts  = rows[-1][3]
@@ -319,14 +371,15 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
                         idx  += 1
                         data = [{"price": float(r[0]), "amount": float(r[1]), "side": r[2],
                                  "time": int(r[3].timestamp()) + 32400} for r in rows]
-                        # 큐가 꽉 차면 전송이 따라올 때까지 블로킹 (백프레셔)
                         asyncio.run_coroutine_threadsafe(queue.put((data, idx, total)), loop).result()
                     asyncio.run_coroutine_threadsafe(queue.put(None), loop).result()
                 except Exception as e:
                     print(f"Backfill thread error: {e}")
                     asyncio.run_coroutine_threadsafe(queue.put(None), loop).result()
                 finally:
-                    cu2.close(); c2.close()
+                    if c2:
+                        try: c2.close()
+                        except: pass
 
             loop.run_in_executor(None, _run_all)
 
@@ -344,17 +397,16 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
                         "total_sent": total_sent,
                     })
                 except Exception:
-                    return  # 연결 끊기면 조용히 종료
+                    return
 
             try:
                 await websocket.send_json({"type": "backfill_done", "total": total_sent})
             except Exception:
                 pass
 
-        # 백필은 Upbit 연결 기다리지 않고 즉시 시작 (Upbit 실패해도 과거 데이터는 떠야 함)
         backfill_task = asyncio.create_task(backfill())
 
-        # COUNT 백그라운드 — 결과 오면 별도 메시지로 진행률 표시 갱신
+        # COUNT 백그라운드
         async def _send_count():
             try:
                 def _q():
@@ -372,6 +424,18 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
         # 업비트 WebSocket — Upbit 끊겨도 클라이언트 연결 유지하며 내부 재연결
         upbit_uri = "wss://api.upbit.com/websocket/v1"
         sub = [{"ticket": "whale-watcher"}, {"type": "trade", "codes": [coin], "isOnlyRealtime": True}, {"format": "SIMPLE"}]
+
+        # 틱 INSERT용 persistent 연결 — 매 틱마다 새 연결 생성 방지
+        tick_conn = None
+
+        def _get_tick_conn():
+            nonlocal tick_conn
+            if tick_conn is None or tick_conn.closed:
+                tick_conn = psycopg2.connect(**DB_CONFIG)
+                with tick_conn.cursor() as c:
+                    c.execute("SET TIME ZONE 'Asia/Seoul'")
+                tick_conn.commit()
+            return tick_conn
 
         while True:
             upbit_ws = None
@@ -428,7 +492,7 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
 
                         trade_id = None
                         try:
-                            conn = psycopg2.connect(**DB_CONFIG); cur = conn.cursor()
+                            tc = _get_tick_conn(); cur = tc.cursor()
                             cur.execute("""
                                 INSERT INTO trades (timestamp, code, price, volume, side, total_amount, pcp, change, sid)
                                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -438,10 +502,18 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
                             row = cur.fetchone()
                             if row:
                                 trade_id = row[0]
-                            conn.commit(); cur.close(); conn.close(); conn = None
+                            tc.commit(); cur.close()
                         except Exception as db_err:
                             print(f"DB insert error: {db_err}")
-                            if conn: conn.close(); conn = None
+                            if tick_conn:
+                                try: tick_conn.close()
+                                except: pass
+                            tick_conn = None  # 다음 틱에서 재연결
+
+                        if trade_id and amount >= 100_000_000:
+                            asyncio.get_running_loop().run_in_executor(
+                                None, _save_whale_prediction, coin, ts, price, side, amount
+                            )
 
                         try:
                             await websocket.send_json({
@@ -474,10 +546,14 @@ async def websocket_endpoint(websocket: WebSocket, coin: str):
         manager.remove(coin, websocket)
         if conn:
             conn.close()
+        if tick_conn:
+            try: tick_conn.close()
+            except: pass
         try:
             backfill_task.cancel()
         except Exception:
             pass
+
 
 
 _daily_cache: dict = {}  # coin → (fetched_at, data)
@@ -626,6 +702,168 @@ def _load_model() -> dict:
     return _model_bundle
 
 
+# ── backtest_log 헬퍼 ──
+
+def _features_from_pre(pre_rows: list, w_price: float, w_side: str, w_amt: float, w_ts) -> list | None:
+    """pre_rows = [(price, side, total_amount, volume), ...] → feature vector or None"""
+    if len(pre_rows) < 3:
+        return None
+    prices  = np.array([float(r[0]) for r in pre_rows])
+    amounts = np.array([float(r[2]) for r in pre_rows])
+    volumes = np.array([float(r[3]) for r in pre_rows])
+    is_bid  = np.array([r[1] == 'BID' for r in pre_rows])
+    buy_amt  = float(amounts[is_bid].sum())
+    sell_amt = float(amounts[~is_bid].sum())
+    total_amt = buy_amt + sell_amt
+    total_cnt = len(pre_rows)
+    pm = float(prices.mean()); ps = float(prices.std())
+    return [
+        buy_amt / total_amt if total_amt > 0 else 0.5,
+        float(is_bid.sum()) / total_cnt if total_cnt > 0 else 0.5,
+        (float(prices[-1]) - float(prices[0])) / float(prices[0]) * 100 if prices[0] else 0.0,
+        total_cnt,
+        float(volumes.sum()),
+        w_amt,
+        1 if w_side == 'BID' else 0,
+        w_ts.hour,
+        ps / pm * 100 if pm else 0.0,
+    ]
+
+
+def _predict_directions(X_batch: np.ndarray) -> dict:
+    """X_batch shape (N, 9) → {'1m': ['UP',...], '5m': [...], '30m': [...]}"""
+    bundle = _load_model()
+    result = {}
+    for tf in ('1m', '5m', '30m'):
+        scaler    = bundle[tf]['scaler']
+        model_obj = bundle[tf]['model']
+        X_in = scaler.transform(X_batch) if scaler is not None else X_batch
+        if hasattr(model_obj, 'predict_proba'):
+            preds = np.argmax(model_obj.predict_proba(X_in), axis=1)
+        else:
+            preds = model_obj.predict(X_in)
+        result[tf] = ['UP' if p == 1 else 'DOWN' for p in preds]
+    return result
+
+
+def _save_whale_prediction(coin: str, wt_ts, w_price: float, w_side: str, w_amt: float):
+    """단일 고래 거래 → 3모델 예측 → backtest_log 저장"""
+    try:
+        conn = _db(); cur = conn.cursor()
+        cur.execute("""
+            SELECT price, side, total_amount, volume FROM trades
+            WHERE code = %s AND timestamp >= %s AND timestamp < %s
+            ORDER BY timestamp ASC
+        """, (coin, wt_ts - timedelta(minutes=10), wt_ts))
+        pre = cur.fetchall(); cur.close(); conn.close()
+
+        feat = _features_from_pre(pre, w_price, w_side, w_amt, wt_ts)
+        if feat is None:
+            return
+
+        dirs = _predict_directions(np.array([feat]))
+        conn2 = _db(); cur2 = conn2.cursor()
+        cur2.execute("""
+            INSERT INTO backtest_log (coin, timestamp, price, side, total_amount,
+                                      direction_1m, direction_5m, direction_30m)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+            ON CONFLICT (coin, timestamp) DO NOTHING
+        """, (coin, wt_ts, w_price, w_side, w_amt,
+              dirs['1m'][0], dirs['5m'][0], dirs['30m'][0]))
+        conn2.commit(); cur2.close(); conn2.close()
+    except Exception as e:
+        print(f"[backtest_log] save error: {e}")
+
+
+def _backfill_backtest_log():
+    """서버 시작 시 backtest_log 누락된 고래 거래 소급 계산"""
+    try:
+        for coin in ('KRW-BTC', 'KRW-ETH'):
+            conn = _db(); cur = conn.cursor()
+            cur.execute("""
+                SELECT t.timestamp, t.price, t.side, t.total_amount
+                FROM trades t
+                WHERE t.code = %s AND t.total_amount >= 100000000
+                  AND NOT EXISTS (
+                    SELECT 1 FROM backtest_log b
+                    WHERE b.coin = %s AND b.timestamp = t.timestamp
+                  )
+                ORDER BY t.timestamp ASC
+            """, (coin, coin))
+            missing = cur.fetchall(); cur.close(); conn.close()
+
+            if not missing:
+                print(f"[backfill] {coin}: 이미 최신")
+                continue
+            print(f"[backfill] {coin}: {len(missing)}건 소급 계산 시작")
+
+            # 7일 단위 청크로 처리
+            CHUNK = timedelta(days=7)
+            chunk_start = missing[0][0]
+            idx = 0; saved = 0
+
+            while idx < len(missing):
+                chunk_end = chunk_start + CHUNK
+                batch = [r for r in missing[idx:] if r[0] < chunk_end]
+                if not batch:
+                    chunk_start = missing[idx][0]
+                    continue
+
+                win_s = batch[0][0] - timedelta(minutes=10)
+                win_e = batch[-1][0]
+                conn2 = _db(); cur2 = conn2.cursor()
+                cur2.execute("""
+                    SELECT timestamp, price, side, total_amount, volume
+                    FROM trades WHERE code = %s
+                      AND timestamp >= %s AND timestamp < %s
+                    ORDER BY timestamp ASC
+                """, (coin, win_s, win_e))
+                window = cur2.fetchall(); cur2.close(); conn2.close()
+
+                ts_vals = np.array([r[0].timestamp() for r in window])
+                pr_arr  = np.array([float(r[1]) for r in window])
+                sd_arr  = np.array([r[2] for r in window])
+                am_arr  = np.array([float(r[3]) for r in window])
+                vo_arr  = np.array([float(r[4]) for r in window])
+                ib_arr  = (sd_arr == 'BID')
+
+                feat_list = []; meta_list = []
+                for wt_ts, w_price, w_side, w_amt in batch:
+                    wv = wt_ts.timestamp()
+                    lo = int(np.searchsorted(ts_vals, wv - 600.0, side='left'))
+                    hi = int(np.searchsorted(ts_vals, wv, side='left'))
+                    if hi - lo < 3:
+                        continue
+                    pre = list(zip(pr_arr[lo:hi], sd_arr[lo:hi], am_arr[lo:hi], vo_arr[lo:hi]))
+                    feat = _features_from_pre(pre, float(w_price), w_side, float(w_amt), wt_ts)
+                    if feat:
+                        feat_list.append(feat)
+                        meta_list.append((wt_ts, float(w_price), w_side, float(w_amt)))
+
+                if feat_list:
+                    dirs = _predict_directions(np.array(feat_list))
+                    conn3 = _db(); cur3 = conn3.cursor()
+                    for j, (wt_ts, wp, ws, wa) in enumerate(meta_list):
+                        cur3.execute("""
+                            INSERT INTO backtest_log
+                              (coin, timestamp, price, side, total_amount,
+                               direction_1m, direction_5m, direction_30m)
+                            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+                            ON CONFLICT (coin, timestamp) DO NOTHING
+                        """, (coin, wt_ts, wp, ws, wa,
+                              dirs['1m'][j], dirs['5m'][j], dirs['30m'][j]))
+                    conn3.commit(); cur3.close(); conn3.close()
+                    saved += len(meta_list)
+
+                idx += len(batch)
+                chunk_start = chunk_end
+                print(f"[backfill] {coin}: {saved}/{len(missing)} 저장")
+
+            print(f"[backfill] {coin}: 완료 ({saved}건)")
+    except Exception as e:
+        print(f"[backfill] 오류: {e}")
+
+
 def _build_prediction_features(coin: str):
     """최근 고래 거래 직전 10분 데이터로 특성 벡터 생성. (features, seconds_ago) 반환"""
     conn = _db(); cur = conn.cursor()
@@ -763,6 +1001,10 @@ async def inject_whale(coin: str = "KRW-BTC", side: str = "BID", amount: float =
 _market_cache: dict = {}
 _MARKET_TTL = 300
 
+# ── 백테스팅 결과 캐시 (5분 TTL) ──
+_backtest_cache: dict = {}
+_BACKTEST_TTL = 3600
+
 def _mcache_get(key):
     entry = _market_cache.get(key)
     if entry and time.time() < entry[1]:
@@ -843,6 +1085,138 @@ def get_kimchi_premium():
         return result
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"김치 프리미엄 API 오류: {e}")
+
+
+@app.get("/backtest")
+def run_backtest(
+    coin: str = "KRW-BTC",
+    model_tf: str = "1m",
+    start_date: str = None,
+    end_date: str = None,
+    threshold: float = 100_000_000,
+    _cache_bust: str = None,  # 내부적으로 캐시 무효화 용도 (미사용)
+):
+    kst = timezone(timedelta(hours=9))
+    now_kst = datetime.now(kst)
+    if not start_date:
+        start_date = (now_kst - timedelta(days=30)).strftime('%Y-%m-%d')
+    if not end_date:
+        end_date = now_kst.strftime('%Y-%m-%d')
+
+    # ── 캐시 확인 ──
+    cache_key = f"{coin}|{model_tf}|{start_date}|{end_date}|{threshold}"
+    cached = _backtest_cache.get(cache_key)
+    if cached and time.time() - cached[1] < _BACKTEST_TTL:
+        return cached[0]
+
+    # backtest_log에서 직접 조회
+    if model_tf not in ('1m', '5m', '30m'):
+        raise HTTPException(status_code=400, detail=f"unknown model_tf: {model_tf}")
+    dir_col = f"direction_{model_tf}"
+
+    conn = _db(); cur = conn.cursor()
+    cur.execute(f"""
+        SELECT timestamp, price, side, {dir_col}
+        FROM backtest_log
+        WHERE coin = %s
+          AND timestamp >= (%s::date)::timestamp AT TIME ZONE 'Asia/Seoul'
+          AND timestamp <  ((%s::date) + INTERVAL '1 day')::timestamp AT TIME ZONE 'Asia/Seoul'
+          AND {dir_col} IS NOT NULL
+        ORDER BY timestamp ASC
+    """, (coin, start_date, end_date))
+    rows = cur.fetchall(); cur.close(); conn.close()
+
+    if len(rows) < 2:
+        raise HTTPException(status_code=422, detail="데이터가 부족합니다. 백필이 아직 진행 중이거나 날짜 범위를 넓혀주세요.")
+
+    signals = [
+        {"ts": r[0], "price": float(r[1]), "side": r[2], "direction": r[3]}
+        for r in rows
+    ]
+
+    if len(signals) < 2:
+        raise HTTPException(status_code=422, detail="유효한 시그널이 부족합니다. 날짜 범위를 넓혀주세요.")
+
+    # Step 4: simulate trading (enter at each signal, exit at next)
+    initial_capital = 1_000_000
+    equity   = float(initial_capital)
+    trades   = []
+    # ts를 Unix 초로 직렬화 → JS에서 new Date() 파싱 오류 없음
+    def _unix(dt):
+        return int(dt.timestamp())
+
+    equity_curve = [{"ts": _unix(signals[0]["ts"]), "value": 0.0}]
+    open_pos = None
+
+    kst9 = timezone(timedelta(hours=9))
+    for sig in signals:
+        if open_pos is not None:
+            ep   = open_pos["entry_price"]
+            xp   = sig["price"]
+            dirn = open_pos["direction"]
+            ret  = (xp - ep) / ep * 100 if dirn == "UP" else (ep - xp) / ep * 100
+            equity *= (1 + ret / 100)
+            cum = (equity - initial_capital) / initial_capital * 100
+            # 시각 표시: KST 기준
+            def _kst_str(dt):
+                if dt.tzinfo:
+                    dt = dt.astimezone(kst9)
+                return dt.strftime('%m/%d %H:%M')
+            trades.append({
+                "entry_ts":    _kst_str(open_pos["entry_ts"]),
+                "exit_ts":     _kst_str(sig["ts"]),
+                "position":    "매수" if dirn == "UP" else "매도",
+                "entry_price": int(ep),
+                "exit_price":  int(xp),
+                "return_pct":  round(ret, 2),
+                "is_win":      ret > 0,
+            })
+            equity_curve.append({"ts": _unix(sig["ts"]), "value": round(cum, 2)})
+        open_pos = {"direction": sig["direction"], "entry_price": sig["price"], "entry_ts": sig["ts"]}
+
+    if not trades:
+        raise HTTPException(status_code=422, detail="완료된 거래가 없습니다.")
+
+    # Step 5: metrics
+    total_trades = len(trades)
+    wins         = sum(1 for t in trades if t["is_win"])
+    win_rate     = wins / total_trades * 100
+    cum_return   = round((equity - initial_capital) / initial_capital * 100, 2)
+    final_equity = round(equity)
+
+    running_eq = float(initial_capital); peak = float(initial_capital); mdd = 0.0
+    for t in trades:
+        running_eq *= (1 + t["return_pct"] / 100)
+        if running_eq > peak: peak = running_eq
+        dd = (peak - running_eq) / peak * 100 if peak > 0 else 0.0
+        if dd > mdd: mdd = dd
+
+    # 보유 전략 비교선: 고래 거래 시점의 실제 가격 변화율 (직선 보간 → 실제 비선형 곡선)
+    base_price = signals[0]["price"]
+    btc_curve = [
+        {"ts": equity_curve[i]["ts"],
+         "value": round((signals[i]["price"] - base_price) / base_price * 100, 2)}
+        for i in range(len(equity_curve))
+    ]
+
+    actual_start_str = signals[0]["ts"].strftime('%Y-%m-%d')
+    actual_end_str   = signals[-1]["ts"].strftime('%Y-%m-%d')
+
+    result = {
+        "win_rate":           round(win_rate, 1),
+        "cumulative_return":  cum_return,
+        "total_trades":       total_trades,
+        "mdd":                round(-mdd, 2),
+        "final_equity":       final_equity,
+        "initial_capital":    initial_capital,
+        "equity_curve":       equity_curve,
+        "btc_curve":          btc_curve,
+        "trades":             list(reversed(trades))[:50],
+        "date_range":         f"{start_date} ~ {end_date}",
+        "actual_date_range":  f"{actual_start_str} ~ {actual_end_str}",
+    }
+    _backtest_cache[cache_key] = (result, time.time())
+    return result
 
 
 if __name__ == "__main__":

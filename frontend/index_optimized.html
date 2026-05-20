@@ -1373,6 +1373,129 @@
         border-color: var(--accent);
         color: var(--accent);
       }
+
+      /* ── BACKTEST PAGE ── */
+      .bt-seg {
+        padding: 6px 14px;
+        border: 1px solid var(--border);
+        background: none;
+        color: var(--text-secondary);
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.82rem;
+        font-weight: 500;
+        font-family: inherit;
+        transition: all 0.15s;
+      }
+      .bt-seg.active {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: rgba(240,185,11,0.08);
+      }
+      .bt-date-input {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 0.82rem;
+        font-family: inherit;
+        color-scheme: dark;
+      }
+      .bt-apply-btn {
+        background: var(--accent);
+        color: #000;
+        border: none;
+        padding: 7px 16px;
+        border-radius: 6px;
+        font-size: 0.82rem;
+        font-weight: 700;
+        cursor: pointer;
+        font-family: inherit;
+        transition: opacity 0.15s;
+      }
+      .bt-apply-btn:hover { opacity: 0.85; }
+      .bt-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px 20px;
+      }
+      .bt-card-label {
+        font-size: 0.72rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        margin-bottom: 10px;
+      }
+      .bt-card-value {
+        font-size: 1.55rem;
+        font-weight: 700;
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .bt-card-sub {
+        font-size: 0.72rem;
+        color: var(--text-secondary);
+        margin-top: 4px;
+      }
+      .bt-chart-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 14px;
+      }
+      .bt-inner-tab {
+        padding: 9px 16px;
+        border: none;
+        background: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-family: inherit;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+        transition: all 0.15s;
+      }
+      .bt-inner-tab.active {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+      }
+      .bt-sim-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 11px 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .bt-sim-label { font-size: 0.88rem; color: var(--text-secondary); }
+      .bt-sim-value { font-size: 0.95rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+      .bt-th {
+        text-align: left;
+        font-size: 0.72rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--border);
+        font-weight: 600;
+      }
+      .bt-td {
+        padding: 9px 10px;
+        font-size: 0.82rem;
+        border-bottom: 1px solid rgba(43,49,57,0.5);
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .bt-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        font-family: inherit;
+      }
+      .bt-badge-buy  { background: rgba(246,70,93,0.15);  color: var(--up); }
+      .bt-badge-sell { background: rgba(49,101,223,0.15); color: var(--down); }
     </style>
   </head>
   <body>
@@ -1392,6 +1515,9 @@
         </button>
         <button class="nav-link" id="nav_whale_btn" onclick="showPage('whale')">
           고래 분석
+        </button>
+        <button class="nav-link" id="nav_backtest_btn" onclick="showPage('backtest')">
+          백테스팅
         </button>
       </div>
       <div class="nav-right">
@@ -1698,15 +1824,15 @@
           <button class="chart-btn" id="btn_1m" onclick="changeTimeframe(60)">
             1분
           </button>
+          <button class="chart-btn" id="btn_5m" onclick="changeTimeframe(300)">
+            5분
+          </button>
           <button
             class="chart-btn"
             id="btn_30m"
             onclick="changeTimeframe(1800)"
           >
             30분
-          </button>
-          <button class="chart-btn" id="btn_1h" onclick="changeTimeframe(3600)">
-            1시간
           </button>
           <div class="tf-divider"></div>
           <span class="tf-label">차트</span>
@@ -1921,6 +2047,170 @@
       </div>
     </div>
 
+    <!-- ── BACKTEST PAGE ── -->
+    <div id="page_backtest" class="page" style="display:none; flex-direction:column; overflow-y:auto; overflow-x:hidden; padding:24px 28px; background:var(--main-bg);">
+
+      <!-- 헤더 -->
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
+        <span style="font-size:1.05rem; font-weight:700;">백테스팅</span>
+      </div>
+
+      <!-- 인라인 에러 메시지 -->
+      <div id="bt_error_bar" style="display:none; background:rgba(246,70,93,0.1); border:1px solid rgba(246,70,93,0.3); border-radius:8px; padding:10px 16px; margin-bottom:14px; font-size:0.84rem; color:var(--up);">
+        <span id="bt_error_text"></span>
+      </div>
+
+      <!-- 코인 / 모델 / 날짜 선택 행 -->
+      <div style="display:flex; align-items:flex-end; gap:8px; margin-bottom:20px; flex-wrap:wrap;">
+        <!-- 코인 -->
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <div style="font-size:0.65rem; color:var(--text-secondary); letter-spacing:0.8px;">코인</div>
+          <div style="display:flex; gap:4px;" id="bt_coin_group">
+            <button class="bt-seg active" data-val="KRW-BTC" onclick="btSelectCoin(this)">BTC</button>
+            <button class="bt-seg" data-val="KRW-ETH" onclick="btSelectCoin(this)">ETH</button>
+          </div>
+        </div>
+        <div style="width:1px; height:32px; background:var(--border); margin:0 4px; align-self:flex-end;"></div>
+        <!-- 모델 -->
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <div style="font-size:0.65rem; color:var(--text-secondary); letter-spacing:0.8px;">예측 모델</div>
+          <div style="display:flex; gap:4px;" id="bt_model_group">
+            <button class="bt-seg active" data-val="1m" onclick="btSelectModel(this)">1m 모델</button>
+            <button class="bt-seg" data-val="5m" onclick="btSelectModel(this)">5m 모델</button>
+            <button class="bt-seg" data-val="30m" onclick="btSelectModel(this)">30m 모델</button>
+          </div>
+        </div>
+        <!-- 날짜 범위 (BL16) -->
+        <div style="display:flex; align-items:center; gap:6px; margin-left:auto;">
+          <span style="font-size:0.8rem; color:var(--text-secondary);">📅</span>
+          <input type="date" id="bt_start" class="bt-date-input">
+          <span style="color:var(--text-secondary);">~</span>
+          <input type="date" id="bt_end" class="bt-date-input">
+          <button class="bt-apply-btn" onclick="loadBacktest()">적용</button>
+        </div>
+      </div>
+
+      <!-- 지표 카드 4개 -->
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px;" id="bt_cards">
+        <div class="bt-card">
+          <div class="bt-card-label">승률</div>
+          <div class="bt-card-value" id="bt_win_rate" style="color:var(--whale-buy)">-</div>
+          <div class="bt-card-sub">고래 신호 방향 적중률</div>
+        </div>
+        <div class="bt-card">
+          <div class="bt-card-label">누적 수익률</div>
+          <div class="bt-card-value" id="bt_cum_return" style="color:var(--up)">-</div>
+          <div class="bt-card-sub">AI 신호 따랐을 때</div>
+        </div>
+        <div class="bt-card">
+          <div class="bt-card-label">총 거래 횟수</div>
+          <div class="bt-card-value" id="bt_total_trades" style="color:var(--text)">-</div>
+          <div class="bt-card-sub" id="bt_date_range_sub">날짜 범위 기준</div>
+        </div>
+        <div class="bt-card">
+          <div class="bt-card-label">MDD</div>
+          <div class="bt-card-value" id="bt_mdd" style="color:var(--down)">-</div>
+          <div class="bt-card-sub">최대 낙폭</div>
+        </div>
+      </div>
+
+      <!-- 내부 탭 -->
+      <div style="display:flex; gap:0; margin-bottom:16px; border-bottom:1px solid var(--border);">
+        <button class="bt-inner-tab active" id="bttab_signal" onclick="btSwitchTab('signal', this)">AI 신호</button>
+        <button class="bt-inner-tab" id="bttab_compare" onclick="btSwitchTab('compare', this)">BTC vs ETH 비교</button>
+      </div>
+
+      <!-- AI 신호 탭 -->
+      <div id="bt_panel_signal">
+
+        <!-- 누적 수익률 차트 -->
+        <div class="bt-chart-card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <span style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1.2px; font-weight:600;">누적 수익률 추이</span>
+            <div style="display:flex; gap:14px; font-size:0.78rem;">
+              <span><span style="display:inline-block;width:12px;height:3px;background:var(--up);border-radius:2px;vertical-align:middle;margin-right:5px;"></span>AI 신호 전략</span>
+              <span><span style="display:inline-block;width:12px;height:2px;background:#b0bec5;border-radius:2px;vertical-align:middle;margin-right:5px;border-top:2px dashed #b0bec5;"></span>기본 보유</span>
+            </div>
+          </div>
+          <div id="bt_chart_container" style="height:220px; position:relative;">
+            <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-secondary);font-size:0.85rem;">차트 로딩 중...</div>
+          </div>
+          <div id="bt_actual_range_note" style="font-size:0.7rem; color:var(--text-secondary); text-align:right; margin-top:6px; display:none;">
+            실제 데이터: <span id="bt_actual_range_text"></span>
+          </div>
+        </div>
+
+        <!-- 100만원 시뮬레이션 (BL16) -->
+        <div class="bt-chart-card">
+          <div style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1.2px; font-weight:600; margin-bottom:4px;">💰 100만원 시뮬레이션</div>
+          <div style="font-size:0.72rem; color:var(--text-secondary); margin-bottom:14px;">고래 신호 발생 시 매수/매도 전환 · 다음 신호까지 보유 · 복리 계산</div>
+          <div class="bt-sim-row">
+            <span class="bt-sim-label">시작 금액</span>
+            <span class="bt-sim-value" style="color:var(--text);">1,000,000원</span>
+          </div>
+          <div class="bt-sim-row">
+            <span class="bt-sim-label">총 거래 횟수</span>
+            <span class="bt-sim-value" id="bt_sim_trades" style="color:var(--text);">-</span>
+          </div>
+          <div class="bt-sim-row" style="border-bottom:none;">
+            <span class="bt-sim-label">최종 평가금액</span>
+            <span class="bt-sim-value" id="bt_sim_final" style="color:var(--up);">-</span>
+          </div>
+        </div>
+
+        <!-- 거래 상세 목록 -->
+        <div class="bt-chart-card">
+          <div style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1.2px; font-weight:600; margin-bottom:4px;">거래 상세 목록</div>
+          <div style="font-size:0.72rem; color:var(--text-secondary); margin-bottom:12px;">진입 → 다음 신호 시 청산 · 최근 50건</div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse;">
+              <thead>
+                <tr>
+                  <th class="bt-th">진입 시각</th>
+                  <th class="bt-th">청산 시각</th>
+                  <th class="bt-th">포지션</th>
+                  <th class="bt-th">진입가</th>
+                  <th class="bt-th">청산가</th>
+                  <th class="bt-th">수익률</th>
+                  <th class="bt-th">결과</th>
+                </tr>
+              </thead>
+              <tbody id="bt_trade_tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- BTC vs ETH 비교 탭 -->
+      <div id="bt_panel_compare" style="display:none;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div class="bt-chart-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <span style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1.2px; font-weight:600;">BTC 누적 수익률</span>
+              <span style="font-size:0.78rem; color:var(--text-secondary);" id="bt_cmp_btc_stats">-</span>
+            </div>
+            <div id="bt_cmp_btc_chart" style="height:200px;"></div>
+            <div id="bt_cmp_btc_range" style="font-size:0.7rem; color:var(--text-secondary); text-align:right; margin-top:4px; display:none;"></div>
+          </div>
+          <div class="bt-chart-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <span style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1.2px; font-weight:600;">ETH 누적 수익률</span>
+              <span style="font-size:0.78rem; color:var(--text-secondary);" id="bt_cmp_eth_stats">-</span>
+            </div>
+            <div id="bt_cmp_eth_chart" style="height:200px;"></div>
+            <div id="bt_cmp_eth_range" style="font-size:0.7rem; color:var(--text-secondary); text-align:right; margin-top:4px; display:none;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 로딩 / 오류 오버레이 -->
+      <div id="bt_loading" style="display:none; position:fixed; top:0;left:0;right:0;bottom:0; background:rgba(11,14,17,0.7); z-index:500; align-items:center; justify-content:center; flex-direction:column; gap:12px;">
+        <div style="font-size:1.5rem;">⏳</div>
+        <div style="color:var(--accent); font-size:0.9rem; font-weight:600;">백테스팅 계산 중...</div>
+        <div style="color:var(--text-secondary); font-size:0.8rem;">고래 신호마다 ML 모델 추론 중</div>
+      </div>
+    </div>
+
     <!-- ── AUTH MODAL ── -->
     <div id="auth_modal" onclick="if (event.target === this) closeAuthModal();">
       <div class="auth-modal-card">
@@ -2011,6 +2301,7 @@
       // ── 페이지 전환 ──
       let wsStarted = false;
       let whaleAnalysisLoaded = false;
+      let backtestLoaded = false;
       function showPage(page) {
         document.getElementById('page_landing').style.display =
           page === 'landing' ? 'flex' : 'none';
@@ -2020,12 +2311,17 @@
           page === 'profile' ? 'flex' : 'none';
         document.getElementById('page_whale').style.display =
           page === 'whale' ? 'block' : 'none';
+        document.getElementById('page_backtest').style.display =
+          page === 'backtest' ? 'flex' : 'none';
         document
           .getElementById('nav_exchange_btn')
           .classList.toggle('active', page === 'exchange');
         document
           .getElementById('nav_whale_btn')
           .classList.toggle('active', page === 'whale');
+        document
+          .getElementById('nav_backtest_btn')
+          .classList.toggle('active', page === 'backtest');
         if (page === 'exchange' && !wsStarted) {
           wsStarted = true;
           initChart();
@@ -2038,6 +2334,22 @@
           loadWhaleAnalysis();
         }
         if (page === 'profile') loadProfile();
+        if (page === 'backtest' && !backtestLoaded) {
+          backtestLoaded = true;
+          btInitDefaults();
+          loadBacktest().then(() => {
+            // 현재 모델 로드 완료 후 나머지 모델+코인 조합을 백그라운드 프리패치
+            const start = document.getElementById('bt_start').value;
+            const end   = document.getElementById('bt_end').value;
+            const allModels = ['1m', '5m', '30m'];
+            const allCoins  = ['KRW-BTC', 'KRW-ETH'];
+            allCoins.forEach(coin => allModels.forEach(model => {
+              if (coin === _btCoin && model === _btModel) return;
+              fetch(`${API_BASE}/backtest?coin=${coin}&model_tf=${model}&start_date=${start}&end_date=${end}`)
+                .catch(() => {});
+            }));
+          });
+        }
       }
 
       async function loadProfile() {
@@ -2372,7 +2684,7 @@
 
       function changeTimeframe(sec) {
         currentInterval = sec;
-        ['btn_1s', 'btn_1m', 'btn_30m', 'btn_1h'].forEach((id) =>
+        ['btn_1s', 'btn_1m', 'btn_5m', 'btn_30m'].forEach((id) =>
           document.getElementById(id).classList.remove('active'),
         );
         const btnId =
@@ -2380,9 +2692,9 @@
             ? 'btn_1s'
             : sec === 60
               ? 'btn_1m'
-              : sec === 1800
-                ? 'btn_30m'
-                : 'btn_1h';
+              : sec === 300
+                ? 'btn_5m'
+                : 'btn_30m';
         document.getElementById(btnId).classList.add('active');
         chart.applyOptions({ timeScale: { secondsVisible: sec === 1 } });
         refreshUI();
@@ -3334,6 +3646,304 @@
       updateMarketIndicators();
       setInterval(updateMarketIndicators, 300000);
       checkAuth();
+
+      // ── 백테스팅 JS ──
+      let _btCoin = 'KRW-BTC';
+      let _btModel = '1m';
+      let _btChart = null;
+      let _btCmpBtcChart = null;
+      let _btCmpEthChart = null;
+      let _btData = null;
+      let _btCompareLoaded = false;  // 비교 탭 캐시 플래그
+
+      function btInitDefaults() {
+        const today = new Date();
+        const start = new Date(today);
+        start.setDate(today.getDate() - 7);
+        const fmt = d => d.toISOString().slice(0, 10);
+        document.getElementById('bt_start').value = fmt(start);
+        document.getElementById('bt_end').value   = fmt(today);
+      }
+
+      function _btIsCompareActive() {
+        const el = document.getElementById('bt_panel_compare');
+        return el && el.style.display === 'block';
+      }
+
+      function btSelectCoin(btn) {
+        document.querySelectorAll('#bt_coin_group .bt-seg').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        _btCoin = btn.dataset.val;
+        loadBacktest();
+        if (_btIsCompareActive()) loadBtCompare();
+      }
+
+      function btSelectModel(btn) {
+        document.querySelectorAll('#bt_model_group .bt-seg').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        _btModel = btn.dataset.val;
+        loadBacktest();
+        if (_btIsCompareActive()) loadBtCompare();
+      }
+
+      function btSwitchTab(tab, btn) {
+        document.querySelectorAll('.bt-inner-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('bt_panel_signal').style.display  = tab === 'signal'  ? 'block' : 'none';
+        document.getElementById('bt_panel_compare').style.display = tab === 'compare' ? 'block' : 'none';
+        if (tab === 'compare' && !_btCompareLoaded) loadBtCompare();
+      }
+
+      function _btShowLoading(show) {
+        document.getElementById('bt_loading').style.display = show ? 'flex' : 'none';
+      }
+
+      function _btFmt(n) {
+        return n.toLocaleString('ko-KR');
+      }
+
+      function _btDrawChart(containerId, equityCurve, btcCurve, compact) {
+        const el = document.getElementById(containerId);
+        el.innerHTML = '';
+        const h = compact ? 200 : 220;
+        const w = el.offsetWidth || el.getBoundingClientRect().width || 600;
+
+        const chart = LightweightCharts.createChart(el, {
+          width: w,
+          height: h,
+          layout: { backgroundColor: '#1e2329', textColor: '#848e9c' },
+          grid: { vertLines: { color: '#2b3139' }, horzLines: { color: '#2b3139' } },
+          rightPriceScale: { borderColor: '#2b3139' },
+          timeScale: { borderColor: '#2b3139', timeVisible: true, secondsVisible: false },
+          crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+        });
+
+        // 중복 ts 제거 (같은 초 내 복수 거래 방어)
+        function _dedup(arr) {
+          const seen = new Set();
+          const out = [];
+          for (const p of arr) {
+            let t = p.ts;
+            while (seen.has(t)) t++;
+            seen.add(t);
+            out.push({ time: t, value: p.value });
+          }
+          return out;
+        }
+
+        // 보유 전략 비교선 (gray dashed — baseline)
+        if (btcCurve && btcCurve.length > 1) {
+          const baselineSeries = chart.addLineSeries({
+            color: '#b0bec5',
+            lineWidth: 2,
+            lineStyle: LightweightCharts.LineStyle.Dashed,
+            priceLineVisible: false,
+            lastValueVisible: true,
+            title: '보유',
+          });
+          try { baselineSeries.setData(_dedup(btcCurve)); } catch(e) {}
+        }
+
+        // AI signal (red solid)
+        const aiSeries = chart.addLineSeries({
+          color: '#f6465d',
+          lineWidth: 2,
+          priceLineVisible: false,
+          lastValueVisible: true,
+          title: 'AI 신호',
+        });
+        const aiData = _dedup(equityCurve);
+        try { aiSeries.setData(aiData); } catch(e) {}
+
+        // 데이터 범위로 타임스케일 명시적 지정 후 fitContent
+        if (aiData.length >= 2) {
+          try {
+            chart.timeScale().setVisibleRange({
+              from: aiData[0].time,
+              to: aiData[aiData.length - 1].time,
+            });
+          } catch(e) {}
+        }
+        chart.timeScale().fitContent();
+        requestAnimationFrame(() => { try { chart.timeScale().fitContent(); } catch(e) {} });
+
+        return chart;
+      }
+
+      function _btRenderSignalTab(data) {
+        // Metric cards
+        const cr = data.cumulative_return;
+        document.getElementById('bt_win_rate').textContent    = data.win_rate + '%';
+        document.getElementById('bt_cum_return').textContent  = (cr >= 0 ? '+' : '') + cr + '%';
+        document.getElementById('bt_cum_return').style.color  = cr >= 0 ? 'var(--up)' : 'var(--down)';
+        document.getElementById('bt_total_trades').textContent = data.total_trades + '회';
+        document.getElementById('bt_mdd').textContent         = data.mdd + '%';
+        document.getElementById('bt_date_range_sub').textContent = data.date_range + ' 기준';
+
+        document.getElementById('bt_actual_range_note').style.display = 'none';
+
+        // Simulation card
+        document.getElementById('bt_sim_trades').textContent = data.total_trades + '회';
+        const fe = data.final_equity;
+        const diff = fe - data.initial_capital;
+        document.getElementById('bt_sim_final').textContent =
+          _btFmt(fe) + '원 ' +
+          `<span style="font-size:0.8rem;color:var(--text-secondary)">(${diff >= 0 ? '+' : ''}${cr}%)</span>`;
+        document.getElementById('bt_sim_final').innerHTML =
+          _btFmt(fe) + '원 ' +
+          `<span style="font-size:0.8rem;color:var(--text-secondary)">(${diff >= 0 ? '+' : ''}${cr}%)</span>`;
+        document.getElementById('bt_sim_final').style.color = diff >= 0 ? 'var(--up)' : 'var(--down)';
+
+        // Chart
+        if (_btChart) { try { _btChart.remove(); } catch(e){} }
+        _btChart = _btDrawChart('bt_chart_container', data.equity_curve, data.btc_curve, false);
+
+        // Trade table — 최근 15건만 표시
+        const tbody = document.getElementById('bt_trade_tbody');
+        tbody.innerHTML = '';
+        if (!data.trades || data.trades.length === 0) {
+          tbody.innerHTML = '<tr><td class="bt-td" colspan="7" style="text-align:center;color:var(--text-secondary);">거래 없음</td></tr>';
+          return;
+        }
+        const show = data.trades.slice(0, 15);
+        let rows = '';
+        for (const t of show) {
+          const ret = t.return_pct;
+          const posBadge = t.position === '매수'
+            ? `<span class="bt-badge bt-badge-buy">매수</span>`
+            : `<span class="bt-badge bt-badge-sell">매도</span>`;
+          const retColor = ret >= 0 ? 'var(--up)' : 'var(--down)';
+          const retStr   = (ret >= 0 ? '+' : '') + ret + '%';
+          const result   = t.is_win ? '✅' : '❌';
+          rows += `<tr>
+            <td class="bt-td">${t.entry_ts}</td>
+            <td class="bt-td">${t.exit_ts}</td>
+            <td class="bt-td">${posBadge}</td>
+            <td class="bt-td">${_btFmt(t.entry_price)}</td>
+            <td class="bt-td">${_btFmt(t.exit_price)}</td>
+            <td class="bt-td" style="color:${retColor}">${retStr}</td>
+            <td class="bt-td">${result}</td>
+          </tr>`;
+        }
+        if (data.trades.length > 15) {
+          rows += `<tr><td class="bt-td" colspan="7" style="text-align:center;color:var(--text-secondary);font-size:0.78rem;">
+            최근 15건 표시 중 (전체 ${data.total_trades}건)
+          </td></tr>`;
+        }
+        tbody.innerHTML = rows;
+      }
+
+      function _btShowError(msg) {
+        const bar  = document.getElementById('bt_error_bar');
+        const text = document.getElementById('bt_error_text');
+        if (msg) {
+          text.textContent = msg;
+          bar.style.display = 'block';
+        } else {
+          bar.style.display = 'none';
+        }
+      }
+
+      async function loadBacktest() {
+        const start = document.getElementById('bt_start').value;
+        const end   = document.getElementById('bt_end').value;
+        if (!start || !end) return;
+
+        _btCompareLoaded = false;  // 파라미터 바뀌면 비교 탭 캐시 무효화
+        _btShowError(null);
+
+        if (_btIsCompareActive()) loadBtCompare();
+
+        _btShowLoading(true);
+        try {
+          const url = `${API_BASE}/backtest?coin=${_btCoin}&model_tf=${_btModel}&start_date=${start}&end_date=${end}`;
+          const res = await fetch(url);
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            _btShowError('백테스팅 오류: ' + (err.detail || `HTTP ${res.status}`));
+            return;
+          }
+          const data = await res.json();
+          _btData = data;
+          _btRenderSignalTab(data);
+        } catch(e) {
+          _btShowError('서버 연결 오류: ' + e.message);
+        } finally {
+          _btShowLoading(false);
+        }
+      }
+
+      async function loadBtCompare() {
+        const end   = document.getElementById('bt_end').value;
+        const model = _btModel;
+
+        async function fetchCoin(coin, startDate) {
+          const url = `${API_BASE}/backtest?coin=${coin}&model_tf=${model}&start_date=${startDate}&end_date=${end}`;
+          const res = await fetch(url);
+          if (!res.ok) return null;
+          return res.json();
+        }
+
+        function tsToDateStr(ts) {
+          return new Date(ts * 1000).toISOString().slice(0, 10);
+        }
+
+        _btShowLoading(true);
+        try {
+          const userStart = document.getElementById('bt_start').value;
+
+          // 1차 로드: 사용자가 선택한 날짜로 동시 조회
+          let [btcData, ethData] = await Promise.all([
+            fetchCoin('KRW-BTC', userStart),
+            fetchCoin('KRW-ETH', userStart),
+          ]);
+
+          // 두 코인의 실제 시작 timestamp 추출
+          if (btcData && ethData) {
+            const btcFirstTs = btcData.equity_curve?.length ? btcData.equity_curve[0].ts : null;
+            const ethFirstTs = ethData.equity_curve?.length ? ethData.equity_curve[0].ts : null;
+
+            if (btcFirstTs && ethFirstTs && btcFirstTs !== ethFirstTs) {
+              // 공통 시작일 = 두 코인 중 더 늦게 시작하는 날짜
+              const commonTs      = Math.max(btcFirstTs, ethFirstTs);
+              const commonStart   = tsToDateStr(commonTs);
+
+              // 더 오래된 데이터를 가진 코인만 공통 시작일로 재조회
+              if (btcFirstTs < ethFirstTs) {
+                btcData = await fetchCoin('KRW-BTC', commonStart);
+              } else {
+                ethData = await fetchCoin('KRW-ETH', commonStart);
+              }
+            }
+          }
+
+          function _renderCmp(data, statsId, chartContainerId, rangeId, btcCurveKey) {
+            if (!data) return null;
+            const commonRange = (() => {
+              if (!btcData?.equity_curve?.length || !ethData?.equity_curve?.length) return '';
+              const from = tsToDateStr(Math.max(btcData.equity_curve[0].ts, ethData.equity_curve[0].ts));
+              const to   = tsToDateStr(Math.min(
+                btcData.equity_curve[btcData.equity_curve.length - 1].ts,
+                ethData.equity_curve[ethData.equity_curve.length - 1].ts,
+              ));
+              return `${from} ~ ${to}`;
+            })();
+            document.getElementById(statsId).textContent =
+              `승률 ${data.win_rate}% · ${data.total_trades}거래` + (commonRange ? ` (${commonRange})` : '');
+            document.getElementById(rangeId).style.display = 'none';
+            const oldChart = statsId.includes('btc') ? _btCmpBtcChart : _btCmpEthChart;
+            if (oldChart) { try { oldChart.remove(); } catch(e){} }
+            return _btDrawChart(chartContainerId, data.equity_curve, data[btcCurveKey], true);
+          }
+
+          _btCmpBtcChart = _renderCmp(btcData, 'bt_cmp_btc_stats', 'bt_cmp_btc_chart', 'bt_cmp_btc_range', 'btc_curve');
+          _btCmpEthChart = _renderCmp(ethData, 'bt_cmp_eth_stats', 'bt_cmp_eth_chart', 'bt_cmp_eth_range', 'btc_curve');
+
+          if (btcData && ethData) _btCompareLoaded = true;
+        } finally {
+          _btShowLoading(false);
+        }
+      }
     </script>
 
     <!-- AI 툴팁 고정 레이어 (overflow: hidden 우회) -->
