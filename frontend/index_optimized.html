@@ -1496,6 +1496,74 @@
       }
       .bt-badge-buy  { background: rgba(246,70,93,0.15);  color: var(--up); }
       .bt-badge-sell { background: rgba(49,101,223,0.15); color: var(--down); }
+
+      /* ── AI 예측현황 PAGE ── */
+      .ai-acc-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 18px 22px;
+      }
+      .ai-acc-label {
+        font-size: 0.72rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        margin-bottom: 10px;
+      }
+      .ai-acc-value {
+        font-size: 1.55rem;
+        font-weight: 700;
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .ai-acc-sub {
+        font-size: 0.72rem;
+        color: var(--text-secondary);
+        margin-top: 4px;
+      }
+      .ai-hourly-bar-wrap {
+        display: flex;
+        align-items: flex-end;
+        gap: 4px;
+        height: 130px;
+        padding: 0 2px;
+      }
+      .ai-hour-col {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 3px;
+      }
+      .ai-hour-bar {
+        width: 100%;
+        border-radius: 3px 3px 0 0;
+        min-height: 3px;
+        transition: opacity 0.15s;
+      }
+      .ai-hour-lbl {
+        font-size: 0.58rem;
+        color: var(--text-secondary);
+      }
+      .ai-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        font-family: inherit;
+      }
+      .ai-badge-up   { background: rgba(246,70,93,0.15);  color: var(--up); }
+      .ai-badge-down { background: rgba(49,101,223,0.15); color: var(--down); }
+      .ai-badge-ok   { background: rgba(0,255,65,0.1);   color: var(--whale-buy); }
+      .ai-badge-fail { background: rgba(246,70,93,0.1);   color: var(--up); }
+      .ai-tf-card { transition: border-color 0.15s; }
+      .ai-tf-card:hover { border-color: rgba(240,185,11,0.5); }
+      .ai-tf-card.active-tf { border-color: var(--accent); background: rgba(240,185,11,0.04); }
+      .ai-hour-col { cursor: pointer; border-radius: 3px; transition: opacity 0.15s; }
+      .ai-hour-col:hover { opacity: 0.75; }
+      .ai-hour-col.ai-selected .ai-hour-bar { outline: 2px solid var(--accent); border-radius: 3px; }
     </style>
   </head>
   <body>
@@ -1518,6 +1586,9 @@
         </button>
         <button class="nav-link" id="nav_backtest_btn" onclick="showPage('backtest')">
           백테스팅
+        </button>
+        <button class="nav-link" id="nav_ai_btn" onclick="showPage('ai')">
+          AI 예측현황
         </button>
       </div>
       <div class="nav-right">
@@ -2211,6 +2282,88 @@
       </div>
     </div>
 
+    <!-- ── AI 예측현황 PAGE ── -->
+    <div id="page_ai" class="page" style="display:none; flex-direction:column; overflow-y:auto; overflow-x:hidden; padding:24px 28px; background:var(--main-bg);">
+
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
+        <span style="font-size:1.05rem; font-weight:700;">AI 예측 현황</span>
+      </div>
+
+      <div id="ai_error_bar" style="display:none; background:rgba(246,70,93,0.1); border:1px solid rgba(246,70,93,0.3); border-radius:8px; padding:10px 16px; margin-bottom:14px; font-size:0.84rem; color:var(--up);">
+        <span id="ai_error_text"></span>
+      </div>
+
+      <!-- 코인 선택 -->
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px; flex-wrap:wrap;">
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <div style="font-size:0.65rem; color:var(--text-secondary); letter-spacing:0.8px;">코인</div>
+          <div style="display:flex; gap:4px;" id="ai_coin_group">
+            <button class="bt-seg active" data-val="KRW-BTC" onclick="aiSelectCoin(this)">BTC</button>
+            <button class="bt-seg" data-val="KRW-ETH" onclick="aiSelectCoin(this)">ETH</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 정확도 카드 3개 (클릭 시 타임프레임 전환) -->
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px;">
+        <div class="ai-acc-card ai-tf-card active-tf" id="ai_card_1m" onclick="aiSelectTf('1m')" style="cursor:pointer; border-color:var(--accent);">
+          <div class="ai-acc-label">1분 예측 정확도</div>
+          <div class="ai-acc-value" id="ai_acc_1m" style="color:var(--whale-buy);">-</div>
+          <div class="ai-acc-sub" id="ai_cnt_1m">데이터 로딩 중...</div>
+        </div>
+        <div class="ai-acc-card ai-tf-card" id="ai_card_5m" onclick="aiSelectTf('5m')" style="cursor:pointer;">
+          <div class="ai-acc-label">5분 예측 정확도</div>
+          <div class="ai-acc-value" id="ai_acc_5m" style="color:var(--whale-buy);">-</div>
+          <div class="ai-acc-sub" id="ai_cnt_5m">데이터 로딩 중...</div>
+        </div>
+        <div class="ai-acc-card ai-tf-card" id="ai_card_30m" onclick="aiSelectTf('30m')" style="cursor:pointer;">
+          <div class="ai-acc-label">30분 예측 정확도</div>
+          <div class="ai-acc-value" id="ai_acc_30m" style="color:var(--accent);">-</div>
+          <div class="ai-acc-sub" id="ai_cnt_30m">데이터 로딩 중...</div>
+        </div>
+      </div>
+
+      <!-- 시간대별 정확도 바 차트 -->
+      <div class="bt-chart-card" style="margin-bottom:14px; padding-bottom:0;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+          <span style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1.2px; font-weight:600;" id="ai_hourly_title">시간대별 예측 정확도 · 1m 모델</span>
+          <span style="font-size:0.72rem; color:var(--text-secondary);" id="ai_hourly_hint">막대 클릭 시 상세 표시</span>
+        </div>
+        <div style="padding:0 4px;">
+          <div class="ai-hourly-bar-wrap" id="ai_hourly_chart"></div>
+          <div style="display:flex; justify-content:space-between; padding:4px 2px 0; font-size:0.6rem; color:var(--text-secondary); margin-top:4px; margin-bottom:12px;">
+            <span>0시</span><span>3시</span><span>6시</span><span>9시</span>
+            <span>12시</span><span>15시</span><span>18시</span><span>21시</span><span>23시</span>
+          </div>
+        </div>
+        <!-- 시간대 상세 카드 -->
+        <div id="ai_hour_detail" style="display:none; border-top:1px solid var(--border); padding:16px 20px;">
+          <div style="font-size:0.85rem; font-weight:700; color:var(--accent); margin-bottom:12px;" id="ai_hour_detail_title"></div>
+          <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px;" id="ai_hour_detail_grid"></div>
+        </div>
+      </div>
+
+      <!-- 최근 예측 결과 목록 -->
+      <div class="bt-chart-card">
+        <div style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1.2px; font-weight:600; margin-bottom:12px;">최근 예측 결과 (최대 30건)</div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%; border-collapse:collapse;">
+            <thead>
+              <tr>
+                <th class="bt-th">날짜</th>
+                <th class="bt-th">시각</th>
+                <th class="bt-th">타임프레임</th>
+                <th class="bt-th">예측 방향</th>
+                <th class="bt-th">실제 방향</th>
+                <th class="bt-th">결과</th>
+              </tr>
+            </thead>
+            <tbody id="ai_recent_tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- ── AUTH MODAL ── -->
     <div id="auth_modal" onclick="if (event.target === this) closeAuthModal();">
       <div class="auth-modal-card">
@@ -2302,6 +2455,7 @@
       let wsStarted = false;
       let whaleAnalysisLoaded = false;
       let backtestLoaded = false;
+      let aiLoaded = false;
       function showPage(page) {
         document.getElementById('page_landing').style.display =
           page === 'landing' ? 'flex' : 'none';
@@ -2313,6 +2467,8 @@
           page === 'whale' ? 'block' : 'none';
         document.getElementById('page_backtest').style.display =
           page === 'backtest' ? 'flex' : 'none';
+        document.getElementById('page_ai').style.display =
+          page === 'ai' ? 'flex' : 'none';
         document
           .getElementById('nav_exchange_btn')
           .classList.toggle('active', page === 'exchange');
@@ -2322,6 +2478,9 @@
         document
           .getElementById('nav_backtest_btn')
           .classList.toggle('active', page === 'backtest');
+        document
+          .getElementById('nav_ai_btn')
+          .classList.toggle('active', page === 'ai');
         if (page === 'exchange' && !wsStarted) {
           wsStarted = true;
           initChart();
@@ -2334,6 +2493,10 @@
           loadWhaleAnalysis();
         }
         if (page === 'profile') loadProfile();
+        if (page === 'ai' && !aiLoaded) {
+          aiLoaded = true;
+          loadAiAccuracy();
+        }
         if (page === 'backtest' && !backtestLoaded) {
           backtestLoaded = true;
           btInitDefaults();
@@ -3942,6 +4105,131 @@
           if (btcData && ethData) _btCompareLoaded = true;
         } finally {
           _btShowLoading(false);
+        }
+      }
+    </script>
+
+    <script>
+      // ── AI 예측현황 JS ──
+      let _aiCoin = 'KRW-BTC';
+      let _aiTf   = '1m';
+      let _aiData = null;
+
+      function aiSelectCoin(btn) {
+        document.querySelectorAll('#ai_coin_group .bt-seg').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        _aiCoin = btn.dataset.val;
+        loadAiAccuracy();
+      }
+
+      function aiSelectTf(tf) {
+        _aiTf = tf;
+        ['1m','5m','30m'].forEach(t => {
+          const card = document.getElementById('ai_card_' + t);
+          card.classList.toggle('active-tf', t === tf);
+          card.style.borderColor = t === tf ? 'var(--accent)' : '';
+        });
+        document.getElementById('ai_hourly_title').textContent = `시간대별 예측 정확도 · ${tf} 모델`;
+        document.getElementById('ai_hour_detail').style.display = 'none';
+        if (_aiData) renderAiHourlyChart(_aiData['hourly_' + tf]);
+      }
+
+      function renderAiHourlyChart(hourly) {
+        const chartEl = document.getElementById('ai_hourly_chart');
+        chartEl.innerHTML = '';
+        const maxAcc = Math.max(...hourly.map(h => h.accuracy), 1);
+        hourly.forEach(h => {
+          const col = document.createElement('div');
+          col.className = 'ai-hour-col';
+          col.id = 'ai_hcol_' + h.hour;
+          col.onclick = () => aiSelectHour(h.hour);
+          const barH = h.count > 0 ? Math.max(6, Math.round(h.accuracy / maxAcc * 110)) : 3;
+          const bar = document.createElement('div');
+          bar.className = 'ai-hour-bar';
+          bar.style.height = barH + 'px';
+          bar.style.background = h.accuracy >= 60 ? 'var(--whale-buy)' : h.accuracy >= 50 ? 'var(--accent)' : 'var(--up)';
+          bar.style.opacity = h.count > 0 ? '0.85' : '0.2';
+          const lbl = document.createElement('div');
+          lbl.className = 'ai-hour-lbl';
+          lbl.textContent = h.hour;
+          col.appendChild(bar);
+          col.appendChild(lbl);
+          chartEl.appendChild(col);
+        });
+      }
+
+      function aiSelectHour(hour) {
+        document.querySelectorAll('.ai-hour-col').forEach(el => el.classList.remove('ai-selected'));
+        const col = document.getElementById('ai_hcol_' + hour);
+        if (col) col.classList.add('ai-selected');
+
+        const hourly = _aiData['hourly_' + _aiTf];
+        const h = hourly[hour];
+        const detail = document.getElementById('ai_hour_detail');
+        detail.style.display = 'block';
+        const hStr = String(hour).padStart(2,'0');
+        const hNext = String(hour + 1).padStart(2,'0');
+        document.getElementById('ai_hour_detail_title').textContent =
+          `${hStr}:00 ~ ${hNext}:00  ·  ${_aiTf} 모델 상세`;
+        const fail = h.count - h.hit;
+        const accStr = h.count > 0 ? h.accuracy + '%' : '-';
+        document.getElementById('ai_hour_detail_grid').innerHTML = `
+          <div style="text-align:center;">
+            <div style="font-size:1.05rem;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--whale-buy);">${accStr}</div>
+            <div style="font-size:0.63rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-top:2px;">정확도</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:1.05rem;font-weight:700;font-family:'JetBrains Mono',monospace;">${h.count}건</div>
+            <div style="font-size:0.63rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-top:2px;">총 예측</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:1.05rem;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--whale-buy);">${h.hit}건</div>
+            <div style="font-size:0.63rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-top:2px;">적중</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:1.05rem;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--up);">${fail}건</div>
+            <div style="font-size:0.63rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-top:2px;">오류</div>
+          </div>`;
+      }
+
+      async function loadAiAccuracy() {
+        document.getElementById('ai_error_bar').style.display = 'none';
+        document.getElementById('ai_hour_detail').style.display = 'none';
+        try {
+          const res = await fetch(`${API_BASE}/predict/accuracy?coin=${_aiCoin}`);
+          if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.detail || `HTTP ${res.status}`); }
+          _aiData = await res.json();
+          const d = _aiData;
+          const accColor = acc => acc >= 60 ? 'var(--whale-buy)' : acc >= 50 ? 'var(--accent)' : 'var(--up)';
+
+          const a1 = document.getElementById('ai_acc_1m');
+          a1.textContent = d.accuracy_1m + '%'; a1.style.color = accColor(d.accuracy_1m);
+          document.getElementById('ai_cnt_1m').textContent = `총 ${d.count_1m}건 중 ${d.hit_1m}건 적중`;
+
+          const a5 = document.getElementById('ai_acc_5m');
+          a5.textContent = d.accuracy_5m + '%'; a5.style.color = accColor(d.accuracy_5m);
+          document.getElementById('ai_cnt_5m').textContent = `총 ${d.count_5m}건 중 ${d.hit_5m}건 적중`;
+
+          const a30 = document.getElementById('ai_acc_30m');
+          a30.textContent = d.accuracy_30m + '%'; a30.style.color = accColor(d.accuracy_30m);
+          document.getElementById('ai_cnt_30m').textContent = `총 ${d.count_30m}건 중 ${d.hit_30m}건 적중`;
+
+          renderAiHourlyChart(d['hourly_' + _aiTf]);
+
+          const tbody = document.getElementById('ai_recent_tbody');
+          if (!d.recent || d.recent.length === 0) {
+            tbody.innerHTML = '<tr><td class="bt-td" colspan="6" style="text-align:center;color:var(--text-secondary);">데이터가 없습니다</td></tr>';
+            return;
+          }
+          tbody.innerHTML = d.recent.map(r => {
+            const predBadge = r.predicted === 'UP' ? '<span class="ai-badge ai-badge-up">▲ 상승</span>' : '<span class="ai-badge ai-badge-down">▼ 하락</span>';
+            const actBadge  = r.actual   === 'UP' ? '<span class="ai-badge ai-badge-up">▲ 상승</span>' : '<span class="ai-badge ai-badge-down">▼ 하락</span>';
+            const resBadge  = r.is_correct ? '<span class="ai-badge ai-badge-ok">✅ 적중</span>' : '<span class="ai-badge ai-badge-fail">❌ 오류</span>';
+            return `<tr><td class="bt-td">${r.date}</td><td class="bt-td">${r.time}</td><td class="bt-td">${r.tf}</td><td class="bt-td">${predBadge}</td><td class="bt-td">${actBadge}</td><td class="bt-td">${resBadge}</td></tr>`;
+          }).join('');
+        } catch (e) {
+          document.getElementById('ai_error_text').textContent = 'AI 정확도 로드 오류: ' + e.message;
+          document.getElementById('ai_error_bar').style.display = 'block';
         }
       }
     </script>

@@ -1005,6 +1005,10 @@ _MARKET_TTL = 300
 _backtest_cache: dict = {}
 _BACKTEST_TTL = 3600
 
+# ── AI 예측 정확도 캐시 (5분 TTL) ──
+_accuracy_cache: dict = {}
+_ACCURACY_TTL = 300
+
 def _mcache_get(key):
     entry = _market_cache.get(key)
     if entry and time.time() < entry[1]:
@@ -1216,6 +1220,127 @@ def run_backtest(
         "actual_date_range":  f"{actual_start_str} ~ {actual_end_str}",
     }
     _backtest_cache[cache_key] = (result, time.time())
+    return result
+
+
+@app.get("/predict/accuracy")
+def get_predict_accuracy(coin: str = "KRW-BTC"):
+    cached = _accuracy_cache.get(coin)
+    if cached and time.time() - cached[1] < _ACCURACY_TTL:
+        return cached[0]
+
+    kst = timezone(timedelta(hours=9))
+    conn = _db(); cur = conn.cursor()
+    cur.execute("""
+        WITH preds AS (
+            SELECT timestamp, price, direction_1m, direction_5m, direction_30m
+            FROM backtest_log
+            WHERE coin = %s
+              AND direction_1m IS NOT NULL
+              AND timestamp < NOW() - INTERVAL '35 min'
+        )
+        SELECT
+            p.timestamp, p.price, p.direction_1m, p.direction_5m, p.direction_30m,
+            t1.price AS actual_1m,
+            t5.price AS actual_5m,
+            t30.price AS actual_30m
+        FROM preds p
+        LEFT JOIN LATERAL (
+            SELECT price FROM trades
+            WHERE code = %s
+              AND timestamp >= p.timestamp + INTERVAL '1 min'
+              AND timestamp <  p.timestamp + INTERVAL '3 min'
+            ORDER BY timestamp LIMIT 1
+        ) t1 ON true
+        LEFT JOIN LATERAL (
+            SELECT price FROM trades
+            WHERE code = %s
+              AND timestamp >= p.timestamp + INTERVAL '5 min'
+              AND timestamp <  p.timestamp + INTERVAL '8 min'
+            ORDER BY timestamp LIMIT 1
+        ) t5 ON true
+        LEFT JOIN LATERAL (
+            SELECT price FROM trades
+            WHERE code = %s
+              AND timestamp >= p.timestamp + INTERVAL '30 min'
+              AND timestamp <  p.timestamp + INTERVAL '35 min'
+            ORDER BY timestamp LIMIT 1
+        ) t30 ON true
+        ORDER BY p.timestamp DESC
+    """, (coin, coin, coin, coin))
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+
+    stats  = {tf: {'correct': 0, 'total': 0} for tf in ('1m', '5m', '30m')}
+    hourly = {tf: {h: {'correct': 0, 'total': 0} for h in range(24)} for tf in ('1m', '5m', '30m')}
+    recent = []
+
+    for row in rows:
+        ts, price, dir_1m, dir_5m, dir_30m, actual_1m, actual_5m, actual_30m = row
+        # 3개 타임프레임 실제 가격이 모두 있는 row만 집계 (건수 일치)
+        if actual_1m is None or actual_5m is None or actual_30m is None:
+            continue
+        if dir_1m is None or dir_5m is None or dir_30m is None:
+            continue
+        price = float(price)
+        ts_kst = ts.astimezone(kst) if ts.tzinfo else ts.replace(tzinfo=timezone.utc).astimezone(kst)
+        hour = ts_kst.hour
+
+        for tf, direction, actual in (('1m', dir_1m, actual_1m), ('5m', dir_5m, actual_5m), ('30m', dir_30m, actual_30m)):
+            actual_f = float(actual)
+            # 가격 동일(무변동)은 예측 틀림으로 처리 → total 항상 증가해 건수 일치
+            is_correct = actual_f != price and (direction == ('UP' if actual_f > price else 'DOWN'))
+            stats[tf]['total'] += 1
+            if is_correct:
+                stats[tf]['correct'] += 1
+            hourly[tf][hour]['total'] += 1
+            if is_correct:
+                hourly[tf][hour]['correct'] += 1
+
+        if len(recent) < 30:
+            for tf, direction, actual in (('1m', dir_1m, actual_1m), ('5m', dir_5m, actual_5m), ('30m', dir_30m, actual_30m)):
+                af2 = float(actual)
+                adir = 'UP' if af2 > price else ('DOWN' if af2 < price else '-')
+                is_c = adir != '-' and direction == adir
+                recent.append({
+                    'date':       ts_kst.strftime('%m/%d'),
+                    'time':       ts_kst.strftime('%H:%M'),
+                    'tf':         tf,
+                    'predicted':  direction,
+                    'actual':     adir,
+                    'is_correct': is_c,
+                })
+                if len(recent) >= 30:
+                    break
+
+    def _acc(s):
+        return round(s['correct'] / s['total'] * 100, 1) if s['total'] > 0 else 0.0
+
+    def _hourly_chart(tf):
+        return [
+            {'hour':     h,
+             'accuracy': round(hourly[tf][h]['correct'] / hourly[tf][h]['total'] * 100, 1) if hourly[tf][h]['total'] > 0 else 0.0,
+             'count':    hourly[tf][h]['total'],
+             'hit':      hourly[tf][h]['correct']}
+            for h in range(24)
+        ]
+
+    result = {
+        'accuracy_1m':  _acc(stats['1m']),
+        'count_1m':     stats['1m']['total'],
+        'hit_1m':       stats['1m']['correct'],
+        'accuracy_5m':  _acc(stats['5m']),
+        'count_5m':     stats['5m']['total'],
+        'hit_5m':       stats['5m']['correct'],
+        'accuracy_30m': _acc(stats['30m']),
+        'count_30m':    stats['30m']['total'],
+        'hit_30m':      stats['30m']['correct'],
+        'hourly_1m':    _hourly_chart('1m'),
+        'hourly_5m':    _hourly_chart('5m'),
+        'hourly_30m':   _hourly_chart('30m'),
+        'recent':       recent,
+    }
+    _accuracy_cache[coin] = (result, time.time())
     return result
 
 

@@ -1382,6 +1382,192 @@
         border-color: var(--accent);
         color: var(--accent);
       }
+
+      /* ── BACKTEST PAGE ── */
+      .bt-seg {
+        padding: 6px 14px;
+        border: 1px solid var(--border);
+        background: none;
+        color: var(--text-secondary);
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.82rem;
+        font-weight: 500;
+        font-family: inherit;
+        transition: all 0.15s;
+      }
+      .bt-seg.active {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: rgba(240,185,11,0.08);
+      }
+      .bt-date-input {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 0.82rem;
+        font-family: inherit;
+        color-scheme: dark;
+      }
+      .bt-apply-btn {
+        background: var(--accent);
+        color: #000;
+        border: none;
+        padding: 7px 16px;
+        border-radius: 6px;
+        font-size: 0.82rem;
+        font-weight: 700;
+        cursor: pointer;
+        font-family: inherit;
+        transition: opacity 0.15s;
+      }
+      .bt-apply-btn:hover { opacity: 0.85; }
+      .bt-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px 20px;
+      }
+      .bt-card-label {
+        font-size: 0.72rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        margin-bottom: 10px;
+      }
+      .bt-card-value {
+        font-size: 1.55rem;
+        font-weight: 700;
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .bt-card-sub {
+        font-size: 0.72rem;
+        color: var(--text-secondary);
+        margin-top: 4px;
+      }
+      .bt-chart-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 14px;
+      }
+      .bt-inner-tab {
+        padding: 9px 16px;
+        border: none;
+        background: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-family: inherit;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+        transition: all 0.15s;
+      }
+      .bt-inner-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+      .bt-sim-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 11px 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .bt-sim-label { font-size: 0.88rem; color: var(--text-secondary); }
+      .bt-sim-value { font-size: 0.95rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+      .bt-th {
+        text-align: left;
+        font-size: 0.72rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--border);
+        font-weight: 600;
+      }
+      .bt-td {
+        padding: 9px 10px;
+        font-size: 0.82rem;
+        border-bottom: 1px solid rgba(43,49,57,0.5);
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .bt-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        font-family: inherit;
+      }
+      .bt-badge-buy  { background: rgba(246,70,93,0.15);  color: var(--up); }
+      .bt-badge-sell { background: rgba(49,101,223,0.15); color: var(--down); }
+
+      /* ── AI 예측현황 PAGE ── */
+      .ai-acc-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 18px 22px;
+      }
+      .ai-acc-label {
+        font-size: 0.72rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        margin-bottom: 10px;
+      }
+      .ai-acc-value {
+        font-size: 1.55rem;
+        font-weight: 700;
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .ai-acc-sub {
+        font-size: 0.72rem;
+        color: var(--text-secondary);
+        margin-top: 4px;
+      }
+      .ai-hourly-bar-wrap {
+        display: flex;
+        align-items: flex-end;
+        gap: 4px;
+        height: 130px;
+        padding: 0 2px;
+      }
+      .ai-hour-col {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 3px;
+      }
+      .ai-hour-bar {
+        width: 100%;
+        border-radius: 3px 3px 0 0;
+        min-height: 3px;
+        transition: opacity 0.15s;
+      }
+      .ai-hour-lbl {
+        font-size: 0.58rem;
+        color: var(--text-secondary);
+      }
+      .ai-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        font-family: inherit;
+      }
+      .ai-badge-up   { background: rgba(246,70,93,0.15);  color: var(--up); }
+      .ai-badge-down { background: rgba(49,101,223,0.15); color: var(--down); }
+      .ai-badge-ok   { background: rgba(0,255,65,0.1);   color: var(--whale-buy); }
+      .ai-badge-fail { background: rgba(246,70,93,0.1);   color: var(--up); }
+      .ai-tf-card { transition: border-color 0.15s; }
+      .ai-tf-card:hover { border-color: rgba(240,185,11,0.5); }
+      .ai-tf-card.active-tf { border-color: var(--accent) !important; background: rgba(240,185,11,0.04); }
+      .ai-hour-col.ai-selected .ai-hour-bar { outline: 2px solid var(--accent); border-radius: 3px; }
     </style>
   </head>
   <body>
@@ -1401,6 +1587,12 @@
         </button>
         <button class="nav-link" id="nav_whale_btn" onclick="showPage('whale')">
           고래 분석
+        </button>
+        <button class="nav-link" id="nav_backtest_btn" onclick="showPage('backtest')">
+          백테스팅
+        </button>
+        <button class="nav-link" id="nav_ai_btn" onclick="showPage('ai')">
+          AI 예측현황
         </button>
       </div>
       <div class="nav-right">
@@ -1930,6 +2122,241 @@
       </div>
     </div>
 
+    <!-- ── BACKTEST PAGE ── -->
+    <div id="page_backtest" class="page" style="display:none; flex-direction:column; overflow-y:auto; overflow-x:hidden; padding:24px 28px; background:var(--main-bg);">
+
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
+        <span style="font-size:1.05rem; font-weight:700;">백테스팅</span>
+      </div>
+
+      <div id="bt_error_bar" style="display:none; background:rgba(246,70,93,0.1); border:1px solid rgba(246,70,93,0.3); border-radius:8px; padding:10px 16px; margin-bottom:14px; font-size:0.84rem; color:var(--up);">
+        <span id="bt_error_text"></span>
+      </div>
+
+      <!-- 코인 / 모델 / 날짜 선택 -->
+      <div style="display:flex; align-items:flex-end; gap:8px; margin-bottom:20px; flex-wrap:wrap;">
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <div style="font-size:0.65rem; color:var(--text-secondary); letter-spacing:0.8px;">코인</div>
+          <div style="display:flex; gap:4px;" id="bt_coin_group">
+            <button class="bt-seg active" data-val="KRW-BTC" onclick="btSelectCoin(this)">BTC</button>
+            <button class="bt-seg" data-val="KRW-ETH" onclick="btSelectCoin(this)">ETH</button>
+          </div>
+        </div>
+        <div style="width:1px; height:32px; background:var(--border); margin:0 4px; align-self:flex-end;"></div>
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <div style="font-size:0.65rem; color:var(--text-secondary); letter-spacing:0.8px;">예측 모델</div>
+          <div style="display:flex; gap:4px;" id="bt_model_group">
+            <button class="bt-seg active" data-val="1m" onclick="btSelectModel(this)">1m 모델</button>
+            <button class="bt-seg" data-val="5m" onclick="btSelectModel(this)">5m 모델</button>
+            <button class="bt-seg" data-val="30m" onclick="btSelectModel(this)">30m 모델</button>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; margin-left:auto;">
+          <span style="font-size:0.8rem; color:var(--text-secondary);">📅</span>
+          <input type="date" id="bt_start" class="bt-date-input">
+          <span style="color:var(--text-secondary);">~</span>
+          <input type="date" id="bt_end" class="bt-date-input">
+          <button class="bt-apply-btn" onclick="loadBacktest()">적용</button>
+        </div>
+      </div>
+
+      <!-- 지표 카드 4개 -->
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px;">
+        <div class="bt-card">
+          <div class="bt-card-label">승률</div>
+          <div class="bt-card-value" id="bt_win_rate" style="color:var(--whale-buy)">-</div>
+          <div class="bt-card-sub">고래 신호 방향 적중률</div>
+        </div>
+        <div class="bt-card">
+          <div class="bt-card-label">누적 수익률</div>
+          <div class="bt-card-value" id="bt_cum_return" style="color:var(--up)">-</div>
+          <div class="bt-card-sub">AI 신호 따랐을 때</div>
+        </div>
+        <div class="bt-card">
+          <div class="bt-card-label">총 거래 횟수</div>
+          <div class="bt-card-value" id="bt_total_trades" style="color:var(--text)">-</div>
+          <div class="bt-card-sub" id="bt_date_range_sub">날짜 범위 기준</div>
+        </div>
+        <div class="bt-card">
+          <div class="bt-card-label">MDD</div>
+          <div class="bt-card-value" id="bt_mdd" style="color:var(--down)">-</div>
+          <div class="bt-card-sub">최대 낙폭</div>
+        </div>
+      </div>
+
+      <!-- 내부 탭 -->
+      <div style="display:flex; gap:0; margin-bottom:16px; border-bottom:1px solid var(--border);">
+        <button class="bt-inner-tab active" id="bttab_signal" onclick="btSwitchTab('signal', this)">AI 신호</button>
+        <button class="bt-inner-tab" id="bttab_compare" onclick="btSwitchTab('compare', this)">BTC vs ETH 비교</button>
+      </div>
+
+      <!-- AI 신호 탭 -->
+      <div id="bt_panel_signal">
+        <div class="bt-chart-card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <span style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1.2px; font-weight:600;">누적 수익률 추이</span>
+            <div style="display:flex; gap:14px; font-size:0.78rem;">
+              <span><span style="display:inline-block;width:12px;height:3px;background:var(--up);border-radius:2px;vertical-align:middle;margin-right:5px;"></span>AI 신호 전략</span>
+              <span><span style="display:inline-block;width:12px;height:2px;background:#b0bec5;border-radius:2px;vertical-align:middle;margin-right:5px;border-top:2px dashed #b0bec5;"></span>기본 보유</span>
+            </div>
+          </div>
+          <div id="bt_chart_container" style="height:220px; position:relative;">
+            <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-secondary);font-size:0.85rem;">차트 로딩 중...</div>
+          </div>
+          <div id="bt_actual_range_note" style="font-size:0.7rem; color:var(--text-secondary); text-align:right; margin-top:6px; display:none;">
+            실제 데이터: <span id="bt_actual_range_text"></span>
+          </div>
+        </div>
+
+        <!-- 100만원 시뮬레이션 -->
+        <div class="bt-chart-card">
+          <div style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1.2px; font-weight:600; margin-bottom:4px;">💰 100만원 시뮬레이션</div>
+          <div style="font-size:0.72rem; color:var(--text-secondary); margin-bottom:14px;">고래 신호 발생 시 매수/매도 전환 · 다음 신호까지 보유 · 복리 계산</div>
+          <div class="bt-sim-row">
+            <span class="bt-sim-label">시작 금액</span>
+            <span class="bt-sim-value" style="color:var(--text);">1,000,000원</span>
+          </div>
+          <div class="bt-sim-row">
+            <span class="bt-sim-label">총 거래 횟수</span>
+            <span class="bt-sim-value" id="bt_sim_trades" style="color:var(--text);">-</span>
+          </div>
+          <div class="bt-sim-row" style="border-bottom:none;">
+            <span class="bt-sim-label">최종 평가금액</span>
+            <span class="bt-sim-value" id="bt_sim_final" style="color:var(--up);">-</span>
+          </div>
+        </div>
+
+        <!-- 거래 상세 목록 -->
+        <div class="bt-chart-card">
+          <div style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1.2px; font-weight:600; margin-bottom:4px;">거래 상세 목록</div>
+          <div style="font-size:0.72rem; color:var(--text-secondary); margin-bottom:12px;">진입 → 다음 신호 시 청산 · 최근 50건</div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse;">
+              <thead>
+                <tr>
+                  <th class="bt-th">진입 시각</th>
+                  <th class="bt-th">청산 시각</th>
+                  <th class="bt-th">포지션</th>
+                  <th class="bt-th">진입가</th>
+                  <th class="bt-th">청산가</th>
+                  <th class="bt-th">수익률</th>
+                  <th class="bt-th">결과</th>
+                </tr>
+              </thead>
+              <tbody id="bt_trade_tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- BTC vs ETH 비교 탭 -->
+      <div id="bt_panel_compare" style="display:none;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div class="bt-chart-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <span style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1.2px; font-weight:600;">BTC 누적 수익률</span>
+              <span style="font-size:0.78rem; color:var(--text-secondary);" id="bt_cmp_btc_stats">-</span>
+            </div>
+            <div id="bt_cmp_btc_chart" style="height:200px;"></div>
+          </div>
+          <div class="bt-chart-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <span style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1.2px; font-weight:600;">ETH 누적 수익률</span>
+              <span style="font-size:0.78rem; color:var(--text-secondary);" id="bt_cmp_eth_stats">-</span>
+            </div>
+            <div id="bt_cmp_eth_chart" style="height:200px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="bt_loading" style="display:none; position:fixed; top:0;left:0;right:0;bottom:0; background:rgba(11,14,17,0.7); z-index:500; align-items:center; justify-content:center; flex-direction:column; gap:12px;">
+        <div style="font-size:1.5rem;">⏳</div>
+        <div style="color:var(--accent); font-size:0.9rem; font-weight:600;">백테스팅 계산 중...</div>
+      </div>
+    </div>
+
+    <!-- ── AI 예측현황 PAGE ── -->
+    <div id="page_ai" class="page" style="display:none; flex-direction:column; overflow-y:auto; overflow-x:hidden; padding:24px 28px; background:var(--main-bg);">
+
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
+        <span style="font-size:1.05rem; font-weight:700;">AI 예측 현황</span>
+      </div>
+
+      <div id="ai_error_bar" style="display:none; background:rgba(246,70,93,0.1); border:1px solid rgba(246,70,93,0.3); border-radius:8px; padding:10px 16px; margin-bottom:14px; font-size:0.84rem; color:var(--up);">
+        <span id="ai_error_text"></span>
+      </div>
+
+      <!-- 코인 선택 -->
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <div style="font-size:0.65rem; color:var(--text-secondary); letter-spacing:0.8px;">코인</div>
+          <div style="display:flex; gap:4px;" id="ai_coin_group">
+            <button class="bt-seg active" data-val="KRW-BTC" onclick="aiSelectCoin(this)">BTC</button>
+            <button class="bt-seg" data-val="KRW-ETH" onclick="aiSelectCoin(this)">ETH</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 정확도 카드 3개 (클릭 시 타임프레임 전환) -->
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px;">
+        <div class="ai-acc-card ai-tf-card active-tf" id="ai_card_1m" onclick="aiSelectTf('1m')" style="cursor:pointer; border-color:var(--accent);">
+          <div class="ai-acc-label">1분 예측 정확도</div>
+          <div class="ai-acc-value" id="ai_acc_1m" style="color:var(--whale-buy);">-</div>
+          <div class="ai-acc-sub" id="ai_cnt_1m">데이터 로딩 중...</div>
+        </div>
+        <div class="ai-acc-card ai-tf-card" id="ai_card_5m" onclick="aiSelectTf('5m')" style="cursor:pointer;">
+          <div class="ai-acc-label">5분 예측 정확도</div>
+          <div class="ai-acc-value" id="ai_acc_5m" style="color:var(--whale-buy);">-</div>
+          <div class="ai-acc-sub" id="ai_cnt_5m">데이터 로딩 중...</div>
+        </div>
+        <div class="ai-acc-card ai-tf-card" id="ai_card_30m" onclick="aiSelectTf('30m')" style="cursor:pointer;">
+          <div class="ai-acc-label">30분 예측 정확도</div>
+          <div class="ai-acc-value" id="ai_acc_30m" style="color:var(--accent);">-</div>
+          <div class="ai-acc-sub" id="ai_cnt_30m">데이터 로딩 중...</div>
+        </div>
+      </div>
+
+      <!-- 시간대별 정확도 바 차트 -->
+      <div class="bt-chart-card" style="margin-bottom:14px; padding-bottom:0;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+          <span style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1.2px; font-weight:600;" id="ai_hourly_title">시간대별 예측 정확도 · 1m 모델</span>
+          <span style="font-size:0.72rem; color:var(--text-secondary);">막대 클릭 시 상세 표시</span>
+        </div>
+        <div style="padding:0 4px;">
+          <div class="ai-hourly-bar-wrap" id="ai_hourly_chart"></div>
+          <div style="display:flex; justify-content:space-between; padding:4px 2px 0; font-size:0.6rem; color:var(--text-secondary); margin-top:4px; margin-bottom:12px;">
+            <span>0시</span><span>3시</span><span>6시</span><span>9시</span>
+            <span>12시</span><span>15시</span><span>18시</span><span>21시</span><span>23시</span>
+          </div>
+        </div>
+        <!-- 시간대 상세 카드 -->
+        <div id="ai_hour_detail" style="display:none; border-top:1px solid var(--border); padding:16px 20px;">
+          <div style="font-size:0.85rem; font-weight:700; color:var(--accent); margin-bottom:12px;" id="ai_hour_detail_title"></div>
+          <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px;" id="ai_hour_detail_grid"></div>
+        </div>
+      </div>
+
+      <!-- 최근 예측 결과 목록 -->
+      <div class="bt-chart-card">
+        <div style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1.2px; font-weight:600; margin-bottom:12px;">최근 예측 결과 (최대 30건)</div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%; border-collapse:collapse;">
+            <thead>
+              <tr>
+                <th class="bt-th">날짜</th>
+                <th class="bt-th">시각</th>
+                <th class="bt-th">타임프레임</th>
+                <th class="bt-th">예측 방향</th>
+                <th class="bt-th">실제 방향</th>
+                <th class="bt-th">결과</th>
+              </tr>
+            </thead>
+            <tbody id="ai_recent_tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- ── AUTH MODAL ── -->
     <div id="auth_modal" onclick="if (event.target === this) closeAuthModal();">
       <div class="auth-modal-card">
@@ -2021,6 +2448,8 @@
       // ── 페이지 전환 ──
       let wsStarted = false;
       let whaleAnalysisLoaded = false;
+      let backtestLoaded = false;
+      let aiLoaded = false;
       function showPage(page) {
         document.getElementById('page_landing').style.display =
           page === 'landing' ? 'flex' : 'none';
@@ -2030,12 +2459,22 @@
           page === 'profile' ? 'flex' : 'none';
         document.getElementById('page_whale').style.display =
           page === 'whale' ? 'block' : 'none';
+        document.getElementById('page_backtest').style.display =
+          page === 'backtest' ? 'flex' : 'none';
+        document.getElementById('page_ai').style.display =
+          page === 'ai' ? 'flex' : 'none';
         document
           .getElementById('nav_exchange_btn')
           .classList.toggle('active', page === 'exchange');
         document
           .getElementById('nav_whale_btn')
           .classList.toggle('active', page === 'whale');
+        document
+          .getElementById('nav_backtest_btn')
+          .classList.toggle('active', page === 'backtest');
+        document
+          .getElementById('nav_ai_btn')
+          .classList.toggle('active', page === 'ai');
         if (page === 'exchange' && !wsStarted) {
           wsStarted = true;
           currentCoin = document.getElementById('coin_select').value;
@@ -2047,6 +2486,15 @@
         if (page === 'whale' && !whaleAnalysisLoaded) {
           whaleAnalysisLoaded = true;
           loadWhaleAnalysis();
+        }
+        if (page === 'backtest' && !backtestLoaded) {
+          backtestLoaded = true;
+          btInitDefaults();
+          loadBacktest();
+        }
+        if (page === 'ai' && !aiLoaded) {
+          aiLoaded = true;
+          loadAiAccuracy();
         }
         if (page === 'profile') loadProfile();
       }
@@ -3422,5 +3870,293 @@
         투자 판단의 참고용이며 손실을 보장하지 않습니다.
       </div>
     </div>
+
+    <script>
+      // ── 백테스팅 JS ──
+      let _btCoin = 'KRW-BTC';
+      let _btModel = '1m';
+      let _btChart = null;
+      let _btCmpBtcChart = null;
+      let _btCmpEthChart = null;
+      let _btCompareLoaded = false;
+
+      function btInitDefaults() {
+        const today = new Date();
+        const start = new Date(today);
+        start.setDate(today.getDate() - 7);
+        const fmt = d => d.toISOString().slice(0, 10);
+        document.getElementById('bt_start').value = fmt(start);
+        document.getElementById('bt_end').value   = fmt(today);
+      }
+
+      function btSelectCoin(btn) {
+        document.querySelectorAll('#bt_coin_group .bt-seg').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        _btCoin = btn.dataset.val;
+        loadBacktest();
+        if (document.getElementById('bt_panel_compare').style.display === 'block') loadBtCompare();
+      }
+
+      function btSelectModel(btn) {
+        document.querySelectorAll('#bt_model_group .bt-seg').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        _btModel = btn.dataset.val;
+        loadBacktest();
+      }
+
+      function btSwitchTab(tab, btn) {
+        document.querySelectorAll('.bt-inner-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('bt_panel_signal').style.display  = tab === 'signal'  ? 'block' : 'none';
+        document.getElementById('bt_panel_compare').style.display = tab === 'compare' ? 'block' : 'none';
+        if (tab === 'compare' && !_btCompareLoaded) loadBtCompare();
+      }
+
+      function _btShowLoading(show) {
+        document.getElementById('bt_loading').style.display = show ? 'flex' : 'none';
+      }
+
+      function _btShowError(msg) {
+        document.getElementById('bt_error_text').textContent = msg;
+        document.getElementById('bt_error_bar').style.display = 'block';
+      }
+
+      function _btFmt(n) { return n.toLocaleString('ko-KR'); }
+
+      function _btDrawChart(containerId, equityCurve, btcCurve, compact) {
+        const el = document.getElementById(containerId);
+        el.innerHTML = '';
+        const h = compact ? 200 : 220;
+        const w = el.offsetWidth || 600;
+        const chart = LightweightCharts.createChart(el, {
+          width: w, height: h,
+          layout: { backgroundColor: '#1e2329', textColor: '#848e9c' },
+          grid: { vertLines: { color: '#2b3139' }, horzLines: { color: '#2b3139' } },
+          rightPriceScale: { borderColor: '#2b3139' },
+          timeScale: { borderColor: '#2b3139', timeVisible: true, secondsVisible: false },
+          crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+        });
+        function _dedup(arr) {
+          const seen = new Set(); const out = [];
+          for (const p of arr) { let t = p.ts; while (seen.has(t)) t++; seen.add(t); out.push({ time: t, value: p.value }); }
+          return out;
+        }
+        if (btcCurve && btcCurve.length > 1) {
+          chart.addLineSeries({ color: '#b0bec5', lineWidth: 2, lineStyle: LightweightCharts.LineStyle.Dashed, priceLineVisible: false }).setData(_dedup(btcCurve));
+        }
+        if (equityCurve && equityCurve.length > 1) {
+          chart.addLineSeries({ color: '#f6465d', lineWidth: 2.5, priceLineVisible: false }).setData(_dedup(equityCurve));
+        }
+        chart.timeScale().fitContent();
+        return chart;
+      }
+
+      async function loadBacktest() {
+        const start = document.getElementById('bt_start').value;
+        const end   = document.getElementById('bt_end').value;
+        if (!start || !end) return;
+        document.getElementById('bt_error_bar').style.display = 'none';
+        _btShowLoading(true);
+        try {
+          const url = `${API_BASE}/backtest?coin=${_btCoin}&model_tf=${_btModel}&start_date=${start}&end_date=${end}`;
+          const res = await fetch(url);
+          if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.detail || `HTTP ${res.status}`); }
+          const d = await res.json();
+          _btData = d;
+          const retColor = d.cumulative_return >= 0 ? 'var(--up)' : 'var(--down)';
+          document.getElementById('bt_win_rate').textContent   = d.win_rate + '%';
+          document.getElementById('bt_cum_return').textContent  = (d.cumulative_return >= 0 ? '+' : '') + d.cumulative_return + '%';
+          document.getElementById('bt_cum_return').style.color  = retColor;
+          document.getElementById('bt_total_trades').textContent = d.total_trades + '회';
+          document.getElementById('bt_mdd').textContent          = d.mdd + '%';
+          document.getElementById('bt_date_range_sub').textContent = d.actual_date_range || d.date_range;
+          document.getElementById('bt_sim_trades').textContent   = d.total_trades + '회';
+          document.getElementById('bt_sim_final').textContent    = _btFmt(d.final_equity) + '원 (' + (d.cumulative_return >= 0 ? '+' : '') + d.cumulative_return + '%)';
+          document.getElementById('bt_sim_final').style.color    = retColor;
+          if (_btChart) { try { _btChart.remove(); } catch(e){} }
+          _btChart = _btDrawChart('bt_chart_container', d.equity_curve, d.btc_curve, false);
+          if (d.actual_date_range) {
+            document.getElementById('bt_actual_range_text').textContent = d.actual_date_range;
+            document.getElementById('bt_actual_range_note').style.display = 'block';
+          }
+          const tbody = document.getElementById('bt_trade_tbody');
+          if (!d.trades || d.trades.length === 0) {
+            tbody.innerHTML = '<tr><td class="bt-td" colspan="7" style="text-align:center;color:var(--text-secondary);">거래 없음</td></tr>';
+          } else {
+            tbody.innerHTML = d.trades.map(t => {
+              const posBadge = t.position === '매수' ? '<span class="bt-badge bt-badge-buy">매수</span>' : '<span class="bt-badge bt-badge-sell">매도</span>';
+              const retColor = t.return_pct >= 0 ? 'var(--up)' : 'var(--down)';
+              const retStr   = (t.return_pct >= 0 ? '+' : '') + t.return_pct + '%';
+              const result   = t.is_win ? '✅' : '❌';
+              return `<tr><td class="bt-td">${t.entry_ts}</td><td class="bt-td">${t.exit_ts}</td><td class="bt-td">${posBadge}</td><td class="bt-td">${_btFmt(t.entry_price)}</td><td class="bt-td">${_btFmt(t.exit_price)}</td><td class="bt-td" style="color:${retColor}">${retStr}</td><td class="bt-td">${result}</td></tr>`;
+            }).join('');
+          }
+        } catch (e) { _btShowError('백테스팅 오류: ' + e.message); }
+        finally { _btShowLoading(false); }
+      }
+
+      async function loadBtCompare() {
+        const start = document.getElementById('bt_start').value;
+        const end   = document.getElementById('bt_end').value;
+        _btShowLoading(true);
+        try {
+          const [rBtc, rEth] = await Promise.all([
+            fetch(`${API_BASE}/backtest?coin=KRW-BTC&model_tf=${_btModel}&start_date=${start}&end_date=${end}`),
+            fetch(`${API_BASE}/backtest?coin=KRW-ETH&model_tf=${_btModel}&start_date=${start}&end_date=${end}`),
+          ]);
+          const btcData = rBtc.ok ? await rBtc.json() : null;
+          const ethData = rEth.ok ? await rEth.json() : null;
+          function _renderCmp(data, statsId, chartId, color) {
+            if (!data) return null;
+            document.getElementById(statsId).textContent = `승률 ${data.win_rate}% · ${data.total_trades}거래`;
+            const el = document.getElementById(chartId);
+            el.innerHTML = '';
+            const chart = LightweightCharts.createChart(el, {
+              width: el.offsetWidth || 400, height: 200,
+              layout: { backgroundColor: '#1e2329', textColor: '#848e9c' },
+              grid: { vertLines: { color: '#2b3139' }, horzLines: { color: '#2b3139' } },
+              rightPriceScale: { borderColor: '#2b3139' },
+              timeScale: { borderColor: '#2b3139', timeVisible: true, secondsVisible: false },
+            });
+            function _dedup(arr) {
+              const seen = new Set(); const out = [];
+              for (const p of arr) { let t = p.ts; while (seen.has(t)) t++; seen.add(t); out.push({ time: t, value: p.value }); }
+              return out;
+            }
+            if (data.btc_curve && data.btc_curve.length > 1)
+              chart.addLineSeries({ color: '#b0bec5', lineWidth: 1.5, lineStyle: LightweightCharts.LineStyle.Dashed, priceLineVisible: false }).setData(_dedup(data.btc_curve));
+            if (data.equity_curve && data.equity_curve.length > 1)
+              chart.addLineSeries({ color: color, lineWidth: 2, priceLineVisible: false }).setData(_dedup(data.equity_curve));
+            chart.timeScale().fitContent();
+            return chart;
+          }
+          if (_btCmpBtcChart) { try { _btCmpBtcChart.remove(); } catch(e){} }
+          if (_btCmpEthChart) { try { _btCmpEthChart.remove(); } catch(e){} }
+          _btCmpBtcChart = _renderCmp(btcData, 'bt_cmp_btc_stats', 'bt_cmp_btc_chart', '#f6465d');
+          _btCmpEthChart = _renderCmp(ethData, 'bt_cmp_eth_stats', 'bt_cmp_eth_chart', '#3165df');
+          if (btcData && ethData) _btCompareLoaded = true;
+        } finally { _btShowLoading(false); }
+      }
+
+      // ── AI 예측현황 JS ──
+      let _aiCoin = 'KRW-BTC';
+      let _aiTf   = '1m';
+      let _aiData = null;
+
+      function aiSelectCoin(btn) {
+        document.querySelectorAll('#ai_coin_group .bt-seg').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        _aiCoin = btn.dataset.val;
+        loadAiAccuracy();
+      }
+
+      function aiSelectTf(tf) {
+        _aiTf = tf;
+        ['1m','5m','30m'].forEach(t => {
+          const card = document.getElementById('ai_card_' + t);
+          card.classList.toggle('active-tf', t === tf);
+          card.style.borderColor = t === tf ? 'var(--accent)' : '';
+        });
+        document.getElementById('ai_hourly_title').textContent = `시간대별 예측 정확도 · ${tf} 모델`;
+        document.getElementById('ai_hour_detail').style.display = 'none';
+        if (_aiData) renderAiHourlyChart(_aiData['hourly_' + tf]);
+      }
+
+      function renderAiHourlyChart(hourly) {
+        const chartEl = document.getElementById('ai_hourly_chart');
+        chartEl.innerHTML = '';
+        const maxAcc = Math.max(...hourly.map(h => h.accuracy), 1);
+        hourly.forEach(h => {
+          const col = document.createElement('div');
+          col.className = 'ai-hour-col';
+          col.id = 'ai_hcol_' + h.hour;
+          col.onclick = () => aiSelectHour(h.hour);
+          const barH = h.count > 0 ? Math.max(6, Math.round(h.accuracy / maxAcc * 110)) : 3;
+          const bar = document.createElement('div');
+          bar.className = 'ai-hour-bar';
+          bar.style.height = barH + 'px';
+          bar.style.background = h.accuracy >= 60 ? 'var(--whale-buy)' : h.accuracy >= 50 ? 'var(--accent)' : 'var(--up)';
+          bar.style.opacity = h.count > 0 ? '0.85' : '0.2';
+          const lbl = document.createElement('div');
+          lbl.className = 'ai-hour-lbl';
+          lbl.textContent = h.hour;
+          col.appendChild(bar); col.appendChild(lbl);
+          chartEl.appendChild(col);
+        });
+      }
+
+      function aiSelectHour(hour) {
+        document.querySelectorAll('.ai-hour-col').forEach(el => el.classList.remove('ai-selected'));
+        const col = document.getElementById('ai_hcol_' + hour);
+        if (col) col.classList.add('ai-selected');
+        const hourly = _aiData['hourly_' + _aiTf];
+        const h = hourly[hour];
+        document.getElementById('ai_hour_detail').style.display = 'block';
+        const hStr = String(hour).padStart(2,'0');
+        const hNext = String(hour + 1).padStart(2,'0');
+        document.getElementById('ai_hour_detail_title').textContent =
+          `${hStr}:00 ~ ${hNext}:00  ·  ${_aiTf} 모델 상세`;
+        const fail = h.count - h.hit;
+        const accStr = h.count > 0 ? h.accuracy + '%' : '-';
+        document.getElementById('ai_hour_detail_grid').innerHTML = `
+          <div style="text-align:center;">
+            <div style="font-size:1.05rem;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--whale-buy);">${accStr}</div>
+            <div style="font-size:0.63rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-top:2px;">정확도</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:1.05rem;font-weight:700;font-family:'JetBrains Mono',monospace;">${h.count}건</div>
+            <div style="font-size:0.63rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-top:2px;">총 예측</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:1.05rem;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--whale-buy);">${h.hit}건</div>
+            <div style="font-size:0.63rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-top:2px;">적중</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:1.05rem;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--up);">${fail}건</div>
+            <div style="font-size:0.63rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-top:2px;">오류</div>
+          </div>`;
+      }
+
+      async function loadAiAccuracy() {
+        document.getElementById('ai_error_bar').style.display = 'none';
+        document.getElementById('ai_hour_detail').style.display = 'none';
+        try {
+          const res = await fetch(`${API_BASE}/predict/accuracy?coin=${_aiCoin}`);
+          if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.detail || `HTTP ${res.status}`); }
+          _aiData = await res.json();
+          const d = _aiData;
+          const accColor = acc => acc >= 60 ? 'var(--whale-buy)' : acc >= 50 ? 'var(--accent)' : 'var(--up)';
+
+          const a1 = document.getElementById('ai_acc_1m');
+          a1.textContent = d.accuracy_1m + '%'; a1.style.color = accColor(d.accuracy_1m);
+          document.getElementById('ai_cnt_1m').textContent = `총 ${d.count_1m}건 중 ${d.hit_1m}건 적중`;
+
+          const a5 = document.getElementById('ai_acc_5m');
+          a5.textContent = d.accuracy_5m + '%'; a5.style.color = accColor(d.accuracy_5m);
+          document.getElementById('ai_cnt_5m').textContent = `총 ${d.count_5m}건 중 ${d.hit_5m}건 적중`;
+
+          const a30 = document.getElementById('ai_acc_30m');
+          a30.textContent = d.accuracy_30m + '%'; a30.style.color = accColor(d.accuracy_30m);
+          document.getElementById('ai_cnt_30m').textContent = `총 ${d.count_30m}건 중 ${d.hit_30m}건 적중`;
+
+          renderAiHourlyChart(d['hourly_' + _aiTf]);
+
+          const tbody = document.getElementById('ai_recent_tbody');
+          if (!d.recent || d.recent.length === 0) {
+            tbody.innerHTML = '<tr><td class="bt-td" colspan="6" style="text-align:center;color:var(--text-secondary);">데이터가 없습니다</td></tr>';
+            return;
+          }
+          tbody.innerHTML = d.recent.map(r => {
+            const predBadge = r.predicted === 'UP' ? '<span class="ai-badge ai-badge-up">▲ 상승</span>' : '<span class="ai-badge ai-badge-down">▼ 하락</span>';
+            const actBadge  = r.actual   === 'UP' ? '<span class="ai-badge ai-badge-up">▲ 상승</span>' : '<span class="ai-badge ai-badge-down">▼ 하락</span>';
+            const resBadge  = r.is_correct ? '<span class="ai-badge ai-badge-ok">✅ 적중</span>' : '<span class="ai-badge ai-badge-fail">❌ 오류</span>';
+            return `<tr><td class="bt-td">${r.date}</td><td class="bt-td">${r.time}</td><td class="bt-td">${r.tf}</td><td class="bt-td">${predBadge}</td><td class="bt-td">${actBadge}</td><td class="bt-td">${resBadge}</td></tr>`;
+          }).join('');
+        } catch (e) {
+          document.getElementById('ai_error_text').textContent = 'AI 정확도 로드 오류: ' + e.message;
+          document.getElementById('ai_error_bar').style.display = 'block';
+        }
+      }
+    </script>
   </body>
 </html>
