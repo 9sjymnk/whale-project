@@ -1497,6 +1497,37 @@
       .bt-badge-buy  { background: rgba(246,70,93,0.15);  color: var(--up); }
       .bt-badge-sell { background: rgba(49,101,223,0.15); color: var(--down); }
 
+      /* ── 신뢰도 패널 ── */
+      .bt-trust-step { display:flex; align-items:flex-start; gap:10px; margin-bottom:14px; }
+      .bt-trust-step-num { width:22px; height:22px; border-radius:50%; background:rgba(240,185,11,0.15); color:var(--accent); font-size:0.72rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+      .bt-trust-divider { border:none; border-top:1px solid var(--border); margin:20px 0; }
+      .bt-trust-more-btn { background:none; border:1px dashed var(--border); color:var(--text-secondary); width:100%; padding:9px; border-radius:8px; font-size:0.78rem; cursor:pointer; margin-top:4px; }
+      .bt-trust-more-btn:hover { border-color:var(--accent); color:var(--accent); }
+      .bt-trust-case { background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:14px 18px; display:grid; grid-template-columns:130px 1fr auto; gap:16px; align-items:center; margin-bottom:10px; }
+      .bt-trust-tf-tag { background:rgba(240,185,11,0.1); color:var(--accent); padding:1px 7px; border-radius:4px; font-size:0.68rem; font-weight:600; width:40px; text-align:center; flex-shrink:0; white-space:nowrap; display:inline-block; }
+
+      /* ── 신호 신뢰도 PAGE ── */
+      .sg-insight-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px; }
+      .sg-insight-card { background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:18px 20px; }
+      .sg-insight-card.hl { border-color:rgba(240,185,11,0.4); background:linear-gradient(135deg,rgba(240,185,11,0.04) 0%,transparent 60%); }
+      .sg-badge { display:inline-block; font-size:0.62rem; font-weight:700; padding:2px 8px; border-radius:4px; margin-bottom:8px; letter-spacing:0.5px; }
+      .sg-badge-hi  { background:rgba(0,255,65,0.12); color:var(--whale-buy); border:1px solid rgba(0,255,65,0.25); }
+      .sg-badge-med { background:rgba(240,185,11,0.12); color:var(--accent); border:1px solid rgba(240,185,11,0.25); }
+      .sg-hour-wrap { display:flex; gap:3px; align-items:flex-end; height:155px; padding:0 4px; }
+      .sg-hour-col  { display:flex; flex-direction:column; align-items:center; gap:4px; flex:1; }
+      .sg-hour-bar  { border-radius:3px 3px 0 0; width:100%; }
+      .sg-hour-lbl  { font-size:0.55rem; color:var(--text-secondary); }
+      .sg-compare-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:20px; }
+      .sg-compare-row { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+      .sg-compare-row:last-child { margin-bottom:0; }
+      .sg-bar-track { flex:1; height:9px; background:rgba(43,49,57,0.8); border-radius:5px; overflow:hidden; }
+      .sg-bar-fill  { height:100%; border-radius:5px; }
+      .sg-combo-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+      .sg-guide-box { margin-top:20px; border:1px solid rgba(0,255,65,0.2); border-radius:12px; background:rgba(0,255,65,0.03); padding:20px 24px; }
+      .sg-warn-box  { margin-top:12px; border:1px solid rgba(246,70,93,0.2); border-radius:12px; background:rgba(246,70,93,0.03); padding:18px 24px; }
+      .sg-chip-good { background:rgba(0,255,65,0.08); border:1px solid rgba(0,255,65,0.2); border-radius:20px; padding:5px 14px; font-size:0.78rem; color:var(--whale-buy); font-weight:600; }
+      .sg-chip-bad  { background:rgba(246,70,93,0.08); border:1px solid rgba(246,70,93,0.2); border-radius:20px; padding:5px 14px; font-size:0.78rem; color:var(--up); font-weight:600; }
+
       /* ── AI 예측현황 PAGE ── */
       .ai-acc-card {
         background: var(--card-bg);
@@ -1587,8 +1618,8 @@
         <button class="nav-link" id="nav_backtest_btn" onclick="showPage('backtest')">
           백테스팅
         </button>
-        <button class="nav-link" id="nav_ai_btn" onclick="showPage('ai')">
-          AI 예측현황
+        <button class="nav-link" id="nav_signal_btn" onclick="showPage('signal')">
+          신호 신뢰도
         </button>
       </div>
       <div class="nav-right">
@@ -2131,6 +2162,81 @@
         <span id="bt_error_text"></span>
       </div>
 
+      <!-- ── 신뢰도 패널 ── -->
+      <div id="bt_trust_wrap" style="border:1px solid rgba(240,185,11,0.25); border-radius:14px; background:linear-gradient(135deg,rgba(240,185,11,0.03) 0%,transparent 60%); padding:24px; margin-bottom:24px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+          <div style="font-size:0.9rem; font-weight:700; color:var(--accent);">🔍 예측 모델, 왜 신뢰할 수 있는가?</div>
+          <button onclick="btToggleTrust()" id="bt_trust_toggle_btn" style="background:none;border:1px solid var(--border);color:var(--text-secondary);padding:3px 10px;border-radius:6px;font-size:0.75rem;cursor:pointer;">▲ 접기</button>
+        </div>
+        <div id="bt_trust_body">
+
+          <!-- STEP 1 -->
+          <div class="bt-trust-step">
+            <div class="bt-trust-step-num">1</div>
+            <div>
+              <span style="font-size:0.78rem; font-weight:700;">먼저 데이터 자체가 말한다</span>
+              <span style="font-size:0.72rem; color:var(--text-secondary); margin-left:8px;">AI 없이, 고래 거래 방향과 실제 가격 방향의 상관관계</span>
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:6px;">
+            <div class="bt-chart-card" style="padding:16px 18px;">
+              <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:14px;">고래가 <span style="color:var(--up); font-weight:700;">대량 매수</span>했을 때 (<span id="bt_trust_buy_cnt">-</span>건)</div>
+              <div id="bt_trust_buy_bars"></div>
+            </div>
+            <div class="bt-chart-card" style="padding:16px 18px;">
+              <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:14px;">고래가 <span style="color:var(--down); font-weight:700;">대량 매도</span>했을 때 (<span id="bt_trust_sell_cnt">-</span>건)</div>
+              <div id="bt_trust_sell_bars"></div>
+            </div>
+          </div>
+
+          <hr class="bt-trust-divider">
+
+          <!-- STEP 2 -->
+          <div class="bt-trust-step">
+            <div class="bt-trust-step-num">2</div>
+            <div style="font-size:0.78rem; font-weight:700;">
+              AI는 이 패턴을 더 정교하게 잡는다
+              <span
+                style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;border:1px solid rgba(240,185,11,0.5);color:var(--accent);font-size:0.68rem;font-weight:700;cursor:pointer;margin-left:7px;vertical-align:middle;"
+                onmouseenter="showTrustSignalTooltip(event)"
+                onmouseleave="hideTrustSignalTooltip()"
+              >ⓘ</span>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:0;">
+            <div class="bt-chart-card" style="flex:1; padding:16px 20px;">
+              <div style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:10px; text-transform:uppercase; letter-spacing:0.8px;">고래 방향만 볼 때</div>
+              <div id="bt_trust_raw_bars"></div>
+            </div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:3px; padding:0 16px; flex-shrink:0;">
+              <div style="font-size:1.4rem; color:var(--accent);">→</div>
+              <div style="font-size:0.65rem; color:var(--text-secondary); white-space:nowrap; text-align:center;">9개 신호<br>종합 분석</div>
+            </div>
+            <div class="bt-chart-card" style="flex:1; padding:16px 20px;">
+              <div style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:10px; text-transform:uppercase; letter-spacing:0.8px;">AI 모델 적용 후</div>
+              <div id="bt_trust_ai_bars"></div>
+            </div>
+            <div style="display:flex; flex-direction:column; justify-content:center; gap:8px; padding-left:16px; flex-shrink:0;" id="bt_trust_gains">
+              <div style="font-size:0.68rem; color:var(--text-secondary); margin-bottom:4px;">AI 추가 개선</div>
+            </div>
+          </div>
+
+          <hr class="bt-trust-divider">
+
+          <!-- STEP 3 -->
+          <div class="bt-trust-step">
+            <div class="bt-trust-step-num">3</div>
+            <div>
+              <span style="font-size:0.78rem; font-weight:700;">실제 사례로 확인</span>
+              <span style="font-size:0.72rem; color:var(--text-secondary); margin-left:8px;">최근 3건 · 더 보기로 10건씩 추가 로드</span>
+            </div>
+          </div>
+          <div id="bt_trust_cases"></div>
+          <button id="bt_trust_more_btn" onclick="btTrustLoadMore()" class="bt-trust-more-btn" style="display:none;">+ 10건 더 보기</button>
+
+        </div>
+      </div>
+
       <!-- 코인 / 모델 / 날짜 선택 행 -->
       <div style="display:flex; align-items:flex-end; gap:8px; margin-bottom:20px; flex-wrap:wrap;">
         <!-- 코인 -->
@@ -2345,7 +2451,7 @@
 
       <!-- 최근 예측 결과 목록 -->
       <div class="bt-chart-card">
-        <div style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1.2px; font-weight:600; margin-bottom:12px;">최근 예측 결과 (최대 30건)</div>
+        <div style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1.2px; font-weight:600; margin-bottom:12px;">최근 예측 결과 (최대 10건)</div>
         <div style="overflow-x:auto;">
           <table style="width:100%; border-collapse:collapse;">
             <thead>
@@ -2361,6 +2467,119 @@
             <tbody id="ai_recent_tbody"></tbody>
           </table>
         </div>
+      </div>
+    </div>
+
+    <!-- ── 신호 신뢰도 PAGE ── -->
+    <div id="page_signal" class="page" style="display:none; flex-direction:column; overflow-y:auto; overflow-x:hidden; padding:24px 28px; background:var(--main-bg);">
+
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+        <div>
+          <div style="font-size:1.05rem; font-weight:700; margin-bottom:4px;">신호 신뢰도 분석</div>
+          <div style="font-size:0.8rem; color:var(--text-secondary);" id="sg_subtitle">같은 AI 신호라도 조건에 따라 신뢰도가 달라집니다</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <div style="font-size:0.62rem; color:var(--text-secondary); letter-spacing:0.8px;">예측 시간</div>
+            <div style="display:flex; gap:4px;" id="sg_tf_group">
+              <button class="bt-seg active" data-val="1m"  onclick="sgSelectTf(this)">1분</button>
+              <button class="bt-seg"        data-val="5m"  onclick="sgSelectTf(this)">5분</button>
+              <button class="bt-seg"        data-val="30m" onclick="sgSelectTf(this)">30분</button>
+            </div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <div style="font-size:0.62rem; color:var(--text-secondary); letter-spacing:0.8px;">코인</div>
+            <div style="display:flex; gap:4px;" id="sg_coin_group">
+              <button class="bt-seg active" data-val="KRW-BTC" onclick="sgSelectCoin(this)">BTC</button>
+              <button class="bt-seg"        data-val="KRW-ETH" onclick="sgSelectCoin(this)">ETH</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="sg_loading" style="text-align:center; padding:60px; color:var(--text-secondary); font-size:0.9rem;">데이터 로딩 중...</div>
+      <div id="sg_error" style="display:none; background:rgba(246,70,93,0.1); border:1px solid rgba(246,70,93,0.3); border-radius:8px; padding:12px 16px; font-size:0.84rem; color:var(--up); margin-bottom:14px;"></div>
+
+      <div id="sg_content" style="display:none;">
+
+        <!-- 인사이트 카드 3개 -->
+        <div class="sg-insight-grid">
+          <div class="sg-insight-card hl">
+            <div class="sg-badge sg-badge-hi">BEST TIME</div>
+            <div style="font-size:0.68rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">가장 신뢰도 높은 시간대</div>
+            <div style="font-size:1.55rem; font-weight:700; font-family:'JetBrains Mono',monospace; color:var(--whale-buy); margin-bottom:4px;" id="sg_best_hours_val">-</div>
+            <div style="font-size:0.74rem; color:var(--text-secondary); line-height:1.5;" id="sg_best_hours_sub">-</div>
+          </div>
+          <div class="sg-insight-card hl">
+            <div class="sg-badge sg-badge-hi">KEY INSIGHT</div>
+            <div style="font-size:0.68rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">방향별 신뢰도 차이</div>
+            <div style="font-size:1.55rem; font-weight:700; font-family:'JetBrains Mono',monospace; margin-bottom:4px;" id="sg_dir_val">-</div>
+            <div style="font-size:0.74rem; color:var(--text-secondary); line-height:1.5;" id="sg_dir_sub">-</div>
+          </div>
+          <div class="sg-insight-card">
+            <div class="sg-badge sg-badge-med">COIN</div>
+            <div style="font-size:0.68rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">코인별 정확도</div>
+            <div style="font-size:1.55rem; font-weight:700; font-family:'JetBrains Mono',monospace; color:var(--accent); margin-bottom:4px;" id="sg_coin_val">-</div>
+            <div style="font-size:0.74rem; color:var(--text-secondary); line-height:1.5;" id="sg_coin_sub">-</div>
+          </div>
+        </div>
+
+        <!-- 시간대 차트 -->
+        <div class="bt-chart-card" style="margin-bottom:0;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+            <div>
+              <span style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1.2px; font-weight:600;" id="sg_hourly_title">시간대별 1분 예측 정확도</span>
+              <span style="font-size:0.72rem; color:var(--text-secondary); margin-left:12px;">0시~23시 (KST)</span>
+            </div>
+            <div style="display:flex; gap:14px; font-size:0.7rem; color:var(--text-secondary);">
+              <span><span style="display:inline-block;width:7px;height:7px;border-radius:2px;background:var(--whale-buy);margin-right:4px;vertical-align:middle;"></span>60%+</span>
+              <span><span style="display:inline-block;width:7px;height:7px;border-radius:2px;background:var(--accent);margin-right:4px;vertical-align:middle;"></span>50~60%</span>
+              <span><span style="display:inline-block;width:7px;height:7px;border-radius:2px;background:var(--up);margin-right:4px;vertical-align:middle;"></span>50%미만</span>
+            </div>
+          </div>
+          <div style="position:relative; margin-bottom:8px;">
+            <div id="sg_baseline" style="position:absolute;left:4px;right:4px;border-top:1px dashed rgba(132,142,156,0.4);">
+              <span style="position:absolute;right:0;font-size:0.6rem;color:var(--text-secondary);transform:translateY(-50%);background:var(--card-bg);padding:0 4px;">50%</span>
+            </div>
+            <div class="sg-hour-wrap" id="sg_hour_chart"></div>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding:0 4px; font-size:0.6rem; color:var(--text-secondary);">
+            <span>0시</span><span>3시</span><span>6시</span><span>9시</span>
+            <span>12시</span><span>15시</span><span>18시</span><span>21시</span><span>23시</span>
+          </div>
+        </div>
+
+        <!-- 조건별 비교 4카드 -->
+        <div class="sg-compare-grid">
+          <div class="bt-chart-card">
+            <div style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1.2px; font-weight:600; margin-bottom:16px;">방향별 신뢰도</div>
+            <div id="sg_dir_bars"></div>
+          </div>
+          <div class="bt-chart-card">
+            <div style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1.2px; font-weight:600; margin-bottom:16px;">코인별 신뢰도</div>
+            <div id="sg_coin_bars"></div>
+          </div>
+          <div class="bt-chart-card">
+            <div style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1.2px; font-weight:600; margin-bottom:16px;">직전 가격 변화율별 신뢰도</div>
+            <div id="sg_trend_bars"></div>
+          </div>
+          <div class="bt-chart-card">
+            <div style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1.2px; font-weight:600; margin-bottom:16px;">매수 금액 비율별 신뢰도</div>
+            <div id="sg_ratio_bars"></div>
+          </div>
+        </div>
+
+        <!-- 조합 분석 -->
+        <div class="bt-chart-card" style="margin-top:20px;">
+          <div style="font-size:0.72rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1.2px; font-weight:600; margin-bottom:6px;">직전 시장 추세 × 고래 방향 조합</div>
+          <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:18px;">고래 거래 직전 10분 가격 방향과 고래 거래 방향의 조합별 정확도</div>
+          <div class="sg-combo-grid" id="sg_combo_grid"></div>
+        </div>
+
+        <!-- 가이드 / 경고 박스 -->
+        <div class="sg-guide-box" id="sg_guide_box"></div>
+        <div class="sg-warn-box" id="sg_warn_box"></div>
+
       </div>
     </div>
 
@@ -2456,6 +2675,7 @@
       let whaleAnalysisLoaded = false;
       let backtestLoaded = false;
       let aiLoaded = false;
+      let _sgLoaded = false;
       function showPage(page) {
         document.getElementById('page_landing').style.display =
           page === 'landing' ? 'flex' : 'none';
@@ -2469,6 +2689,8 @@
           page === 'backtest' ? 'flex' : 'none';
         document.getElementById('page_ai').style.display =
           page === 'ai' ? 'flex' : 'none';
+        document.getElementById('page_signal').style.display =
+          page === 'signal' ? 'flex' : 'none';
         document
           .getElementById('nav_exchange_btn')
           .classList.toggle('active', page === 'exchange');
@@ -2479,8 +2701,8 @@
           .getElementById('nav_backtest_btn')
           .classList.toggle('active', page === 'backtest');
         document
-          .getElementById('nav_ai_btn')
-          .classList.toggle('active', page === 'ai');
+          .getElementById('nav_signal_btn')
+          .classList.toggle('active', page === 'signal');
         if (page === 'exchange' && !wsStarted) {
           wsStarted = true;
           initChart();
@@ -2497,9 +2719,14 @@
           aiLoaded = true;
           loadAiAccuracy();
         }
+        if (page === 'signal' && !_sgLoaded) {
+          _sgLoaded = true;
+          loadSignalTrust();
+        }
         if (page === 'backtest' && !backtestLoaded) {
           backtestLoaded = true;
           btInitDefaults();
+          loadTrustPanel();
           loadBacktest().then(() => {
             // 현재 모델 로드 완료 후 나머지 모델+코인 조합을 백그라운드 프리패치
             const start = document.getElementById('bt_start').value;
@@ -3729,6 +3956,19 @@
         document.getElementById('ai_predict_body').innerHTML = html;
       }
 
+      // ── 신뢰도 패널 9개 신호 툴팁 ──
+      function showTrustSignalTooltip(event) {
+        const tip = document.getElementById('trust_signal_tooltip');
+        const rect = event.currentTarget.getBoundingClientRect();
+        tip.style.display = 'block';
+        const left = Math.min(rect.left, window.innerWidth - 320);
+        tip.style.left = left + 'px';
+        tip.style.top  = (rect.bottom + 8) + 'px';
+      }
+      function hideTrustSignalTooltip() {
+        document.getElementById('trust_signal_tooltip').style.display = 'none';
+      }
+
       // ── AI 툴팁 (fixed 레이어) ──
       function showAiTooltip(event) {
         const tip = document.getElementById('ai_fixed_tooltip');
@@ -3838,6 +4078,7 @@
         btn.classList.add('active');
         _btCoin = btn.dataset.val;
         loadBacktest();
+        loadTrustPanel();
         if (_btIsCompareActive()) loadBtCompare();
       }
 
@@ -4036,6 +4277,161 @@
         }
       }
 
+      // ── 신뢰도 패널 ──
+      let _trustData = null;
+      let _trustShown = 3;
+      let _trustCollapsed = false;
+
+      function btToggleTrust() {
+        _trustCollapsed = !_trustCollapsed;
+        document.getElementById('bt_trust_body').style.display = _trustCollapsed ? 'none' : 'block';
+        document.getElementById('bt_trust_toggle_btn').textContent = _trustCollapsed ? '▼ 펼치기' : '▲ 접기';
+      }
+
+      function _btTrustBarRow(label, pct, color) {
+        return `<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px;">
+          <div style="display:flex;justify-content:space-between;font-size:0.72rem;">
+            <span style="color:var(--text-secondary);">${label}</span>
+            <span style="font-weight:700;font-family:'Courier New',monospace;color:${color};">${pct}%</span>
+          </div>
+          <div style="height:10px;background:rgba(43,49,57,0.8);border-radius:5px;overflow:hidden;">
+            <div style="height:100%;width:${pct}%;background:${color};opacity:0.75;border-radius:5px;"></div>
+          </div>
+        </div>`;
+      }
+
+      function _btTrustTfRow(tf, rawPct, aiPct) {
+        const rawBar = `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <span class="bt-trust-tf-tag">${tf}</span>
+          <div style="flex:1;height:8px;background:rgba(43,49,57,0.8);border-radius:4px;overflow:hidden;">
+            <div style="height:100%;width:${rawPct}%;background:#848e9c;border-radius:4px;"></div>
+          </div>
+          <span style="font-size:0.78rem;font-weight:700;font-family:'Courier New',monospace;width:36px;text-align:right;color:var(--text-secondary);">${rawPct}%</span>
+        </div>`;
+        const aiBar = `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <span class="bt-trust-tf-tag">${tf}</span>
+          <div style="flex:1;height:8px;background:rgba(43,49,57,0.8);border-radius:4px;overflow:hidden;">
+            <div style="height:100%;width:${aiPct}%;background:var(--whale-buy);border-radius:4px;"></div>
+          </div>
+          <span style="font-size:0.78rem;font-weight:700;font-family:'Courier New',monospace;width:36px;text-align:right;color:var(--whale-buy);">${aiPct}%</span>
+        </div>`;
+        return { rawBar, aiBar };
+      }
+
+      function _btTrustFmtAmt(amt) {
+        if (amt >= 100000000) return (amt / 100000000).toFixed(1) + '억원';
+        if (amt >= 10000000)  return (amt / 10000000).toFixed(0) + '천만원';
+        return (amt / 10000).toFixed(0) + '만원';
+      }
+
+      function _btTrustCaseHTML(c) {
+        const sideColor = c.side === 'BUY' ? 'var(--up)' : 'var(--down)';
+        const sideLabel = c.side === 'BUY' ? '▲ 대량 매수' : '▼ 대량 매도';
+        const hits = ['1m','5m','30m'].filter(tf => c.results[tf] && c.results[tf].is_hit).length;
+        let icon, lbl;
+        if (hits === 3)      { icon = '✅'; lbl = '전 타임프레임<br>적중'; }
+        else if (hits >= 1)  { icon = '⚡'; lbl = `${hits}/3<br>적중`; }
+        else                 { icon = '❌'; lbl = '미적중'; }
+        const borderColor = hits >= 2 ? 'rgba(0,255,65,0.5)' : 'rgba(246,70,93,0.35)';
+        const tfRows = ['1m','5m','30m'].map(tf => {
+          const r = c.results[tf];
+          if (!r) return '';
+          const pctStr = (r.actual_pct >= 0 ? '+' : '') + r.actual_pct.toFixed(2) + '%';
+          const pctColor = r.actual_pct >= 0 ? 'var(--up)' : 'var(--down)';
+          const chk = r.is_hit
+            ? '<span style="color:var(--whale-buy);">✓</span>'
+            : '<span style="color:var(--up);opacity:0.55;">✗</span>';
+          return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+            <span class="bt-trust-tf-tag">${tf}</span>
+            <span style="font-family:'Courier New',monospace;color:${pctColor};font-size:0.73rem;width:56px;">${pctStr}</span>
+            ${chk}
+          </div>`;
+        }).join('');
+        return `<div class="bt-trust-case" style="border-left:3px solid ${borderColor};">
+          <div>
+            <div style="font-size:0.73rem;color:var(--text-secondary);font-family:'Courier New',monospace;">${c.ts}</div>
+            <div style="font-size:0.82rem;font-weight:600;color:${sideColor};margin:3px 0;">${sideLabel}</div>
+            <div style="font-size:0.7rem;color:var(--text-secondary);">${_btTrustFmtAmt(c.amount)}</div>
+          </div>
+          <div>${tfRows}</div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:52px;">
+            <div style="font-size:1.4rem;">${icon}</div>
+            <div style="font-size:0.63rem;color:var(--text-secondary);text-align:center;">${lbl}</div>
+          </div>
+        </div>`;
+      }
+
+      function _btTrustRenderCases() {
+        if (!_trustData) return;
+        const cases = _trustData.cases || [];
+        const shown = cases.slice(0, _trustShown);
+        document.getElementById('bt_trust_cases').innerHTML = shown.map(_btTrustCaseHTML).join('');
+        const moreBtn = document.getElementById('bt_trust_more_btn');
+        if (_trustShown < cases.length) {
+          moreBtn.style.display = 'block';
+          moreBtn.textContent = `+ 10건 더 보기 (${cases.length - _trustShown}건 남음)`;
+        } else {
+          moreBtn.style.display = 'none';
+        }
+      }
+
+      function btTrustLoadMore() {
+        _trustShown += 10;
+        _btTrustRenderCases();
+      }
+
+      function _btTrustRender(d) {
+        document.getElementById('bt_trust_buy_cnt').textContent = d.buy_count.toLocaleString('ko-KR');
+        document.getElementById('bt_trust_sell_cnt').textContent = d.sell_count.toLocaleString('ko-KR');
+
+        // STEP 1 bars
+        const rb = d.raw_buy, rs = d.raw_sell;
+        document.getElementById('bt_trust_buy_bars').innerHTML =
+          _btTrustBarRow('1분 후 가격 상승', rb['1m'], 'var(--up)') +
+          _btTrustBarRow('5분 후 가격 상승', rb['5m'], 'var(--up)') +
+          _btTrustBarRow('30분 후 가격 상승', rb['30m'], 'var(--up)');
+        document.getElementById('bt_trust_sell_bars').innerHTML =
+          _btTrustBarRow('1분 후 가격 하락', rs['1m'], 'var(--down)') +
+          _btTrustBarRow('5분 후 가격 하락', rs['5m'], 'var(--down)') +
+          _btTrustBarRow('30분 후 가격 하락', rs['30m'], 'var(--down)');
+
+
+        // STEP 2 bars
+        const ai = d.ai_acc;
+        const ro  = d.raw_overall || { '1m': ((rb['1m'] + rs['1m']) / 2), '5m': ((rb['5m'] + rs['5m']) / 2), '30m': ((rb['30m'] + rs['30m']) / 2) };
+        let rawHtml = '', aiHtml = '', gainHtml = '<div style="font-size:0.68rem;color:var(--text-secondary);margin-bottom:4px;">AI 추가 개선</div>';
+        for (const tf of ['1m','5m','30m']) {
+          const raw = parseFloat(ro[tf]);
+          const aim = ai[tf];
+          const rows = _btTrustTfRow(tf, raw, aim);
+          rawHtml += rows.rawBar;
+          aiHtml  += rows.aiBar;
+          const diff = (aim - raw).toFixed(1);
+          const diffColor = diff >= 0 ? 'var(--whale-buy)' : 'var(--up)';
+          const diffStr = (diff >= 0 ? '+' : '') + diff + '%';
+          gainHtml += `<div style="display:flex;align-items:center;gap:6px;font-size:0.75rem;">
+            <span style="color:var(--text-secondary);width:28px;">${tf}</span>
+            <span style="color:${diffColor};font-weight:700;font-family:'Courier New',monospace;">${diffStr}</span>
+          </div>`;
+        }
+        document.getElementById('bt_trust_raw_bars').innerHTML = rawHtml;
+        document.getElementById('bt_trust_ai_bars').innerHTML  = aiHtml;
+        document.getElementById('bt_trust_gains').innerHTML    = gainHtml;
+
+        // STEP 3
+        _trustShown = 3;
+        _btTrustRenderCases();
+      }
+
+      async function loadTrustPanel() {
+        try {
+          const res = await fetch(`${API_BASE}/predict/trust_stats?coin=${_btCoin}`);
+          if (!res.ok) return;
+          _trustData = await res.json();
+          _btTrustRender(_trustData);
+        } catch(e) { /* 신뢰도 패널 로드 실패는 무시 */ }
+      }
+
       async function loadBtCompare() {
         const end   = document.getElementById('bt_end').value;
         const model = _btModel;
@@ -4232,7 +4628,318 @@
           document.getElementById('ai_error_bar').style.display = 'block';
         }
       }
+      // ── 신호 신뢰도 JS ──
+      let _sgCoin    = 'KRW-BTC';
+      let _sgTf      = '1m';
+      let _sgBtcData = null;
+      let _sgEthData = null;
+
+      function sgSelectCoin(btn) {
+        document.querySelectorAll('#sg_coin_group .bt-seg').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        _sgCoin = btn.dataset.val;
+        if (_sgBtcData && _sgEthData) renderSignalTrust();
+      }
+
+      function sgSelectTf(btn) {
+        document.querySelectorAll('#sg_tf_group .bt-seg').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        _sgTf = btn.dataset.val;
+        if (_sgBtcData && _sgEthData) renderSignalTrust();
+      }
+
+      async function loadSignalTrust() {
+        document.getElementById('sg_loading').style.display = 'block';
+        document.getElementById('sg_content').style.display = 'none';
+        document.getElementById('sg_error').style.display   = 'none';
+        try {
+          const [r1, r2] = await Promise.all([
+            fetch(`${API_BASE}/predict/signal_trust?coin=KRW-BTC`),
+            fetch(`${API_BASE}/predict/signal_trust?coin=KRW-ETH`),
+          ]);
+          _sgBtcData = await r1.json();
+          _sgEthData = await r2.json();
+          renderSignalTrust();
+        } catch (e) {
+          document.getElementById('sg_loading').style.display = 'none';
+          const el = document.getElementById('sg_error');
+          el.textContent = '데이터 로드 오류: ' + e.message;
+          el.style.display = 'block';
+        }
+      }
+
+      function _sgBarRow(label, acc, cnt, color) {
+        const pct = acc != null ? acc : 0;
+        const w   = Math.min(pct, 100).toFixed(1);
+        return `<div class="sg-compare-row">
+          <div style="font-size:0.8rem;font-weight:600;width:84px;flex-shrink:0;color:${color};">${label}</div>
+          <div class="sg-bar-track"><div class="sg-bar-fill" style="width:${w}%;background:${color};opacity:0.78;"></div></div>
+          <div style="font-size:0.82rem;font-weight:700;font-family:'JetBrains Mono',monospace;width:44px;text-align:right;flex-shrink:0;color:${color};">${acc != null ? acc + '%' : '-'}</div>
+          <div style="font-size:0.68rem;color:var(--text-secondary);width:48px;flex-shrink:0;">${cnt != null ? cnt.toLocaleString() + '건' : '-'}</div>
+        </div>`;
+      }
+
+      function renderSignalTrust() {
+        const raw   = _sgCoin === 'KRW-BTC' ? _sgBtcData : _sgEthData;
+        const rawOther = _sgCoin === 'KRW-BTC' ? _sgEthData : _sgBtcData;
+        const d     = raw[_sgTf]      || {};
+        const other = rawOther[_sgTf] || {};
+        const coinLbl  = _sgCoin === 'KRW-BTC' ? 'BTC' : 'ETH';
+        const otherLbl = _sgCoin === 'KRW-BTC' ? 'ETH' : 'BTC';
+        const tfLabel  = {  '1m': '1분', '5m': '5분', '30m': '30분' }[_sgTf];
+
+        document.getElementById('sg_loading').style.display = 'none';
+        document.getElementById('sg_content').style.display = 'block';
+        document.getElementById('sg_subtitle').textContent =
+          `같은 AI 신호라도 조건에 따라 신뢰도가 달라집니다 · ${tfLabel} 모델 기준 · ${(d.total || 0).toLocaleString()}건 분석`;
+
+        // ── 인사이트 카드 ──
+        const bh = d.best_hours || [];
+        const bhStr    = bh.slice(0,2).map(h => `${h.h}시`).join(' · ') || '-';
+        const bhAccStr = bh.slice(0,2).map(h => `${h.acc}%`).join(' · ');
+        const bhDelta  = bh[0] ? (bh[0].acc - 50).toFixed(1) : '0';
+        document.getElementById('sg_best_hours_val').textContent = bhStr;
+        document.getElementById('sg_best_hours_sub').innerHTML =
+          `각각 <strong style="color:var(--text);">${bhAccStr}</strong> 적중<br>랜덤 대비 +${bhDelta}%p 우위`;
+
+        const dirBuy  = d.direction?.BUY  || {acc: 0, cnt: 0};
+        const dirSell = d.direction?.SELL || {acc: 0, cnt: 0};
+        const bestDir      = (dirSell.acc || 0) > (dirBuy.acc || 0) ? 'SELL' : 'BUY';
+        const bestDirLabel = bestDir === 'SELL' ? '▼ 매도 신호' : '▲ 매수 신호';
+        const bestDirColor = bestDir === 'SELL' ? 'var(--down)' : 'var(--up)';
+        const bestDirAcc   = bestDir === 'SELL' ? dirSell.acc : dirBuy.acc;
+        const worstDirAcc  = bestDir === 'SELL' ? dirBuy.acc  : dirSell.acc;
+        document.getElementById('sg_dir_val').textContent = bestDir === 'SELL' ? '매도 신호' : '매수 신호';
+        document.getElementById('sg_dir_val').style.color = bestDirColor;
+        document.getElementById('sg_dir_sub').innerHTML =
+          `매도 <strong style="color:var(--text);">${dirSell.acc ?? '-'}%</strong> vs 매수 <strong style="color:var(--text);">${dirBuy.acc ?? '-'}%</strong><br>${bestDir === 'SELL' ? '매도' : '매수'} 신호가 훨씬 신뢰도 높음`;
+
+        const myAcc  = d.overall_acc ?? '-';
+        const othAcc = other.overall_acc ?? '-';
+        const betterCoin = parseFloat(myAcc) >= parseFloat(othAcc) ? coinLbl : otherLbl;
+        const betterAcc  = parseFloat(myAcc) >= parseFloat(othAcc) ? myAcc   : othAcc;
+        const worseAcc   = parseFloat(myAcc) >= parseFloat(othAcc) ? othAcc  : myAcc;
+        const coinDelta  = Math.abs(parseFloat(myAcc) - parseFloat(othAcc)).toFixed(1);
+        document.getElementById('sg_coin_val').textContent = `${betterCoin} 우위`;
+        document.getElementById('sg_coin_sub').innerHTML =
+          `${betterCoin} <strong style="color:var(--text);">${betterAcc}%</strong> · ${betterCoin === coinLbl ? otherLbl : coinLbl} <strong style="color:var(--text);">${worseAcc}%</strong><br>${betterCoin} 신호가 약 ${coinDelta}%p 더 정확`;
+
+        // ── 시간대 차트 ──
+        document.getElementById('sg_hourly_title').textContent = `시간대별 ${tfLabel} 예측 정확도`;
+        const hourChart = document.getElementById('sg_hour_chart');
+        hourChart.innerHTML = '';
+        const hVals  = Object.values(d.hourly || {}).map(h => h.acc || 0).filter(a => a > 0);
+        const maxAcc = hVals.length > 0 ? Math.min(100, Math.ceil(Math.max(...hVals) / 5) * 5 + 5) : 80;
+        for (let h = 0; h < 24; h++) {
+          const hd    = d.hourly?.[h] || d.hourly?.[String(h)] || {acc: 0, cnt: 0};
+          const barH  = hd.cnt > 0 ? Math.max(4, Math.round((hd.acc / maxAcc) * 100)) : 3;
+          const color = hd.acc >= 60 ? 'var(--whale-buy)' : hd.acc >= 50 ? 'var(--accent)' : 'var(--up)';
+          const op    = hd.cnt > 0 ? (hd.acc >= 60 ? '0.9' : '0.7') : '0.2';
+          const col   = document.createElement('div');
+          col.className = 'sg-hour-col';
+          col.title = `${h}시 · ${hd.acc ?? '-'}% (${hd.cnt}건)`;
+          col.innerHTML = `
+            <div style="font-size:0.58rem;color:${color};font-weight:700;font-family:'JetBrains Mono',monospace;">${hd.cnt > 0 ? hd.acc : ''}</div>
+            <div class="sg-hour-bar" style="height:${barH}px;background:${color};opacity:${op};"></div>
+            <div class="sg-hour-lbl">${h}</div>`;
+          hourChart.appendChild(col);
+        }
+        const baselineY = Math.round((50 / maxAcc) * 100);
+        document.getElementById('sg_baseline').style.bottom = (baselineY + 28) + 'px';
+
+        // ── 방향별 바 ──
+        const bestDirBuyColor  = bestDir === 'BUY'  ? 'var(--up)'   : 'var(--text-secondary)';
+        const bestDirSellColor = bestDir === 'SELL' ? 'var(--down)' : 'var(--text-secondary)';
+        document.getElementById('sg_dir_bars').innerHTML =
+          _sgBarRow('▲ 매수 신호', dirBuy.acc,  dirBuy.cnt,  bestDirBuyColor) +
+          _sgBarRow('▼ 매도 신호', dirSell.acc, dirSell.cnt, bestDirSellColor) +
+          `<div style="margin-top:12px;padding:10px 12px;background:rgba(49,101,223,0.07);border-left:2px solid ${bestDirColor};border-radius:0 6px 6px 0;font-size:0.73rem;color:var(--text-secondary);line-height:1.5;">
+            ${bestDirLabel}가 <strong style="color:var(--text);">${Math.abs((bestDirAcc||0)-(worstDirAcc||0)).toFixed(1)}%p</strong> 더 정확합니다.
+          </div>`;
+
+        // ── 코인별 바 ──
+        document.getElementById('sg_coin_bars').innerHTML =
+          _sgBarRow(coinLbl,  parseFloat(myAcc),  d.total,     parseFloat(myAcc) >= parseFloat(othAcc) ? 'var(--whale-buy)' : 'var(--text-secondary)') +
+          _sgBarRow(otherLbl, parseFloat(othAcc), other.total, parseFloat(othAcc) >  parseFloat(myAcc)  ? 'var(--whale-buy)' : 'var(--text-secondary)');
+
+        // ── 가격 변화율 바 ──
+        const pt = d.price_trend || {};
+        const bestTrend = d.best_trend || 'down';
+        const trendRows = [
+          {key:'down', label:'하락 중', color: bestTrend==='down' ? 'var(--whale-buy)' : 'var(--text-secondary)'},
+          {key:'flat', label:'보합',    color: bestTrend==='flat' ? 'var(--accent)'    : 'var(--text-secondary)'},
+          {key:'up',   label:'상승 중', color: bestTrend==='up'   ? 'var(--up)'        : 'var(--text-secondary)'},
+        ];
+        const trendBestLabel = {down:'내리는 중', flat:'보합세', up:'오르는 중'}[bestTrend];
+        document.getElementById('sg_trend_bars').innerHTML =
+          trendRows.map(t => _sgBarRow(t.label, pt[t.key]?.acc, pt[t.key]?.cnt, t.color)).join('') +
+          `<div style="margin-top:12px;padding:10px 12px;background:rgba(0,255,65,0.05);border-left:2px solid var(--whale-buy);border-radius:0 6px 6px 0;font-size:0.73rem;color:var(--text-secondary);line-height:1.5;">
+            시장이 <strong style="color:var(--text);">${trendBestLabel}</strong>일 때 신호가 ${pt[bestTrend]?.acc ?? '-'}%로 가장 정확합니다.
+          </div>`;
+
+        // ── 매수 금액 비율 바 ──
+        const br = d.buy_ratio || {};
+        const bestRatio = d.best_buy_ratio || 'buy_dom';
+        const ratioRows = [
+          {key:'buy_dom',  label:'매수 우세', color: bestRatio==='buy_dom'  ? 'var(--whale-buy)' : 'var(--text-secondary)'},
+          {key:'neutral',  label:'중립',      color: bestRatio==='neutral'  ? 'var(--accent)'    : 'var(--text-secondary)'},
+          {key:'sell_dom', label:'매도 우세', color: bestRatio==='sell_dom' ? 'var(--up)'        : 'var(--text-secondary)'},
+        ];
+        const ratioBestLabel = {buy_dom:'매수세가 강할', neutral:'중립적일', sell_dom:'매도세가 강할'}[bestRatio];
+        document.getElementById('sg_ratio_bars').innerHTML =
+          ratioRows.map(r => _sgBarRow(r.label, br[r.key]?.acc, br[r.key]?.cnt, r.color)).join('') +
+          `<div style="margin-top:12px;padding:10px 12px;background:rgba(240,185,11,0.05);border-left:2px solid var(--accent);border-radius:0 6px 6px 0;font-size:0.73rem;color:var(--text-secondary);line-height:1.5;">
+            전체 시장 ${ratioBestLabel} 때 신호 정확도가 ${br[bestRatio]?.acc ?? '-'}%로 가장 높습니다.
+          </div>`;
+
+        // ── 조합 분석 ──
+        const combos = d.combination || {};
+        const comboOrder = [
+          {key:'down_BUY',  trendLbl:'시장 하락 중', dirLbl:'▲ 고래 매수', dirColor:'var(--up)'},
+          {key:'up_BUY',    trendLbl:'시장 상승 중', dirLbl:'▲ 고래 매수', dirColor:'var(--up)'},
+          {key:'down_SELL', trendLbl:'시장 하락 중', dirLbl:'▼ 고래 매도', dirColor:'var(--down)'},
+          {key:'up_SELL',   trendLbl:'시장 상승 중', dirLbl:'▼ 고래 매도', dirColor:'var(--down)'},
+        ];
+        const comboSorted = comboOrder
+          .filter(c => combos[c.key])
+          .sort((a,b) => (combos[b.key]?.acc || 0) - (combos[a.key]?.acc || 0));
+        const rankMap = {};
+        comboSorted.forEach((c, i) => { rankMap[c.key] = i; });
+        const rankLabels = ['최강 신호', '유효 신호', '주의', '최약 신호'];
+        const rankColors = [
+          {bg:'rgba(0,255,65,0.06)',   border:'rgba(0,255,65,0.25)',   acc:'var(--whale-buy)'},
+          {bg:'rgba(240,185,11,0.04)', border:'rgba(240,185,11,0.2)',  acc:'var(--accent)'},
+          {bg:'rgba(246,70,93,0.04)',  border:'rgba(246,70,93,0.15)',  acc:'var(--text-secondary)'},
+          {bg:'rgba(246,70,93,0.08)',  border:'rgba(246,70,93,0.3)',   acc:'var(--up)'},
+        ];
+        const barBgMap = ['var(--whale-buy)', 'var(--accent)', 'var(--up)', 'var(--up)'];
+        const barOpMap = ['1', '1', '0.5', '0.75'];
+
+        document.getElementById('sg_combo_grid').innerHTML = comboOrder.map(c => {
+          const cd   = combos[c.key] || {acc: null, cnt: 0};
+          const rank = rankMap[c.key] ?? 3;
+          const col  = rankColors[rank];
+          const barW = Math.min(cd.acc ?? 0, 100);
+          return `<div style="background:${col.bg};border:1px solid ${col.border};border-radius:10px;padding:16px 18px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+              <div>
+                <span style="font-size:0.7rem;color:var(--text-secondary);">${c.trendLbl} →</span>
+                <span style="font-size:0.82rem;font-weight:700;color:${c.dirColor};margin-left:6px;">${c.dirLbl}</span>
+              </div>
+              <span style="font-size:1.5rem;font-weight:700;font-family:'JetBrains Mono',monospace;color:${col.acc};">${cd.acc != null ? cd.acc + '%' : '-'}</span>
+            </div>
+            <div style="height:6px;background:rgba(43,49,57,0.8);border-radius:3px;overflow:hidden;margin-bottom:8px;">
+              <div style="height:100%;width:${barW}%;background:${barBgMap[rank]};border-radius:3px;opacity:${barOpMap[rank]};"></div>
+            </div>
+            <div style="font-size:0.72rem;color:var(--text-secondary);line-height:1.5;">${(cd.cnt||0).toLocaleString()}건 · <strong style="color:${col.acc};">${rankLabels[rank]}</strong></div>
+          </div>`;
+        }).join('');
+
+        // ── 가이드 / 경고 박스 (동적 텍스트) ──
+        const bestHoursChip  = bh.slice(0,2).map(h => `${h.h}시대`).join(' · ');
+        const worstHoursChip = (d.worst_hours || []).slice(0,2).map(h => `${h.h}시대`).join(' · ');
+        const trendLabels    = {down:'시장 하락 중', flat:'시장 보합세', up:'시장 상승 중'};
+        const worstTrend     = d.worst_trend || 'up';
+        const worstDirLabel  = bestDir === 'SELL' ? '▲ 매수 신호' : '▼ 매도 신호';
+
+        const goodChips = [
+          bestDirLabel, bestHoursChip, trendLabels[bestTrend],
+        ].filter(Boolean).map(t => `<span class="sg-chip-good">${t}</span>`).join('');
+
+        const bestComboKey   = d.best_combo;
+        const bestComboInfo  = comboOrder.find(c => c.key === bestComboKey);
+        const bestComboData  = bestComboKey ? combos[bestComboKey] : null;
+        const guideBodyExtra = bestComboInfo
+          ? `특히 <strong style="color:var(--text);">${bestComboInfo.trendLbl}에 ${bestComboInfo.dirLbl}</strong>가 ${bestComboData?.acc}%로 최강 조합입니다.<br>`
+          : '';
+        document.getElementById('sg_guide_box').innerHTML = `
+          <div style="font-size:0.85rem;font-weight:700;color:var(--whale-buy);margin-bottom:14px;">✅ 이 조건이 겹칠수록 신호 신뢰도가 높아집니다</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">${goodChips}</div>
+          <div style="font-size:0.85rem;color:var(--text-secondary);line-height:1.6;">
+            ${guideBodyExtra}${bestHoursChip ? `<strong>${bestHoursChip}</strong>에 ${bestDirLabel.replace('▼ ','').replace('▲ ','')} 신호가 발생하면 가장 신뢰할 수 있는 상황입니다.` : ''}
+          </div>`;
+
+        const badChips = [
+          worstDirLabel, worstHoursChip, trendLabels[worstTrend],
+        ].filter(Boolean).map(t => `<span class="sg-chip-bad">${t}</span>`).join('');
+
+        const worstComboKey  = d.worst_combo;
+        const worstComboInfo = comboOrder.find(c => c.key === worstComboKey);
+        const worstComboData = worstComboKey ? combos[worstComboKey] : null;
+        const warnBodyMain   = worstComboInfo
+          ? `${worstComboInfo.trendLbl}에 ${worstComboInfo.dirLbl}는 ${worstComboData?.acc}%로 <strong style="color:var(--text);">최약 신호입니다.</strong><br>`
+          : '';
+        document.getElementById('sg_warn_box').innerHTML = `
+          <div style="font-size:0.85rem;font-weight:700;color:var(--up);margin-bottom:10px;">⚠️ 이 조건에서는 신호를 주의하세요</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">${badChips}</div>
+          <div style="font-size:0.8rem;color:var(--text-secondary);line-height:1.6;">
+            ${warnBodyMain}${worstHoursChip} 시간대와 ${trendLabels[worstTrend]?.replace('시장 ','')} 환경에서는 신호를 단독으로 판단하지 마세요.
+          </div>`;
+      }
+
     </script>
+
+    <!-- 신뢰도 패널 9개 신호 툴팁 -->
+    <div id="trust_signal_tooltip" style="display:none;position:fixed;z-index:99999;background:#1e2329;border:1px solid #2b3139;border-radius:10px;padding:16px 18px;width:300px;font-size:0.76rem;color:#eaecef;line-height:1.6;box-shadow:0 10px 32px rgba(0,0,0,0.55);pointer-events:none;">
+      <div style="font-weight:700;color:#f0b90b;margin-bottom:12px;font-size:0.82rem;">📊 AI가 분석하는 9가지 신호</div>
+      <div style="font-size:0.65rem;color:#848e9c;margin-bottom:10px;letter-spacing:0.5px;">예측 기여도 순 · 3개 모델(1m·5m·30m) 평균</div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="color:#f0b90b;font-weight:700;width:14px;flex-shrink:0;">①</span>
+          <span style="flex:1;font-weight:600;">고래 방향</span>
+          <div style="width:70px;height:5px;background:#2b3139;border-radius:3px;overflow:hidden;"><div style="height:100%;width:100%;background:#f0b90b;border-radius:3px;"></div></div>
+          <span style="color:#f0b90b;font-weight:700;width:36px;text-align:right;font-family:'Courier New',monospace;">20.5%</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="color:#f0b90b;font-weight:700;width:14px;flex-shrink:0;">②</span>
+          <span style="flex:1;font-weight:600;">가격 변화율</span>
+          <div style="width:70px;height:5px;background:#2b3139;border-radius:3px;overflow:hidden;"><div style="height:100%;width:66%;background:#f0b90b;border-radius:3px;opacity:0.75;"></div></div>
+          <span style="color:#848e9c;width:36px;text-align:right;font-family:'Courier New',monospace;">13.6%</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="color:#f0b90b;font-weight:700;width:14px;flex-shrink:0;">③</span>
+          <span style="flex:1;font-weight:600;">매수 금액 비율</span>
+          <div style="width:70px;height:5px;background:#2b3139;border-radius:3px;overflow:hidden;"><div style="height:100%;width:58%;background:#f0b90b;border-radius:3px;opacity:0.7;"></div></div>
+          <span style="color:#848e9c;width:36px;text-align:right;font-family:'Courier New',monospace;">11.8%</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="color:#f0b90b;font-weight:700;width:14px;flex-shrink:0;">④</span>
+          <span style="flex:1;font-weight:600;">매수 횟수 비율</span>
+          <div style="width:70px;height:5px;background:#2b3139;border-radius:3px;overflow:hidden;"><div style="height:100%;width:48%;background:#f0b90b;border-radius:3px;opacity:0.65;"></div></div>
+          <span style="color:#848e9c;width:36px;text-align:right;font-family:'Courier New',monospace;">9.9%</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="color:#f0b90b;font-weight:700;width:14px;flex-shrink:0;">⑤</span>
+          <span style="flex:1;font-weight:600;">거래 횟수</span>
+          <div style="width:70px;height:5px;background:#2b3139;border-radius:3px;overflow:hidden;"><div style="height:100%;width:48%;background:#f0b90b;border-radius:3px;opacity:0.6;"></div></div>
+          <span style="color:#848e9c;width:36px;text-align:right;font-family:'Courier New',monospace;">9.8%</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="color:#f0b90b;font-weight:700;width:14px;flex-shrink:0;">⑥</span>
+          <span style="flex:1;font-weight:600;">총 거래량</span>
+          <div style="width:70px;height:5px;background:#2b3139;border-radius:3px;overflow:hidden;"><div style="height:100%;width:47%;background:#f0b90b;border-radius:3px;opacity:0.6;"></div></div>
+          <span style="color:#848e9c;width:36px;text-align:right;font-family:'Courier New',monospace;">9.6%</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="color:#f0b90b;font-weight:700;width:14px;flex-shrink:0;">⑦</span>
+          <span style="flex:1;font-weight:600;">가격 변동성</span>
+          <div style="width:70px;height:5px;background:#2b3139;border-radius:3px;overflow:hidden;"><div style="height:100%;width:46%;background:#f0b90b;border-radius:3px;opacity:0.55;"></div></div>
+          <span style="color:#848e9c;width:36px;text-align:right;font-family:'Courier New',monospace;">9.4%</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="color:#f0b90b;font-weight:700;width:14px;flex-shrink:0;">⑧</span>
+          <span style="flex:1;font-weight:600;">고래 거래 금액</span>
+          <div style="width:70px;height:5px;background:#2b3139;border-radius:3px;overflow:hidden;"><div style="height:100%;width:42%;background:#f0b90b;border-radius:3px;opacity:0.55;"></div></div>
+          <span style="color:#848e9c;width:36px;text-align:right;font-family:'Courier New',monospace;">8.6%</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="color:#f0b90b;font-weight:700;width:14px;flex-shrink:0;">⑨</span>
+          <span style="flex:1;font-weight:600;">거래 시간대</span>
+          <div style="width:70px;height:5px;background:#2b3139;border-radius:3px;overflow:hidden;"><div style="height:100%;width:33%;background:#f0b90b;border-radius:3px;opacity:0.5;"></div></div>
+          <span style="color:#848e9c;width:36px;text-align:right;font-family:'Courier New',monospace;">6.8%</span>
+        </div>
+      </div>
+    </div>
 
     <!-- AI 툴팁 고정 레이어 (overflow: hidden 우회) -->
     <div

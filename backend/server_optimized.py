@@ -1297,7 +1297,7 @@ def get_predict_accuracy(coin: str = "KRW-BTC"):
             if is_correct:
                 hourly[tf][hour]['correct'] += 1
 
-        if len(recent) < 30:
+        if len(recent) < 10:
             for tf, direction, actual in (('1m', dir_1m, actual_1m), ('5m', dir_5m, actual_5m), ('30m', dir_30m, actual_30m)):
                 af2 = float(actual)
                 adir = 'UP' if af2 > price else ('DOWN' if af2 < price else '-')
@@ -1310,7 +1310,7 @@ def get_predict_accuracy(coin: str = "KRW-BTC"):
                     'actual':     adir,
                     'is_correct': is_c,
                 })
-                if len(recent) >= 30:
+                if len(recent) >= 10:
                     break
 
     def _acc(s):
@@ -1341,6 +1341,289 @@ def get_predict_accuracy(coin: str = "KRW-BTC"):
         'recent':       recent,
     }
     _accuracy_cache[coin] = (result, time.time())
+    return result
+
+
+_trust_cache: dict = {}
+_TRUST_TTL = 600  # 10분
+
+
+@app.get("/predict/trust_stats")
+def get_trust_stats(coin: str = "KRW-BTC"):
+    cached = _trust_cache.get(coin)
+    if cached and time.time() - cached[1] < _TRUST_TTL:
+        return cached[0]
+
+    kst = timezone(timedelta(hours=9))
+    conn = _db(); cur = conn.cursor()
+    cur.execute("""
+        WITH preds AS (
+            SELECT timestamp, price, side, total_amount,
+                   direction_1m, direction_5m, direction_30m
+            FROM backtest_log
+            WHERE coin = %s
+              AND direction_1m IS NOT NULL
+              AND timestamp < NOW() - INTERVAL '35 min'
+        )
+        SELECT
+            p.timestamp, p.price, p.side, p.total_amount,
+            p.direction_1m, p.direction_5m, p.direction_30m,
+            t1.price AS actual_1m,
+            t5.price AS actual_5m,
+            t30.price AS actual_30m
+        FROM preds p
+        LEFT JOIN LATERAL (
+            SELECT price FROM trades
+            WHERE code = %s
+              AND timestamp >= p.timestamp + INTERVAL '1 min'
+              AND timestamp <  p.timestamp + INTERVAL '3 min'
+            ORDER BY timestamp LIMIT 1
+        ) t1 ON true
+        LEFT JOIN LATERAL (
+            SELECT price FROM trades
+            WHERE code = %s
+              AND timestamp >= p.timestamp + INTERVAL '5 min'
+              AND timestamp <  p.timestamp + INTERVAL '8 min'
+            ORDER BY timestamp LIMIT 1
+        ) t5 ON true
+        LEFT JOIN LATERAL (
+            SELECT price FROM trades
+            WHERE code = %s
+              AND timestamp >= p.timestamp + INTERVAL '30 min'
+              AND timestamp <  p.timestamp + INTERVAL '35 min'
+            ORDER BY timestamp LIMIT 1
+        ) t30 ON true
+        ORDER BY p.timestamp DESC
+    """, (coin, coin, coin, coin))
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+
+    raw = {
+        'BUY':  {tf: {'hit': 0, 'total': 0} for tf in ('1m', '5m', '30m')},
+        'SELL': {tf: {'hit': 0, 'total': 0} for tf in ('1m', '5m', '30m')},
+    }
+    ai_st = {tf: {'hit': 0, 'total': 0} for tf in ('1m', '5m', '30m')}
+    side_counts = {'BUY': 0, 'SELL': 0}
+    cases = []
+
+    for row in rows:
+        ts, price, side, amount, dir_1m, dir_5m, dir_30m, actual_1m, actual_5m, actual_30m = row
+        if actual_1m is None or actual_5m is None or actual_30m is None:
+            continue
+        price = float(price)
+        ts_kst = ts.astimezone(kst) if ts.tzinfo else ts.replace(tzinfo=timezone.utc).astimezone(kst)
+        actuals  = {'1m': float(actual_1m), '5m': float(actual_5m), '30m': float(actual_30m)}
+        ai_dirs  = {'1m': dir_1m, '5m': dir_5m, '30m': dir_30m}
+        side_key = 'BUY' if side == 'BID' else 'SELL'
+        side_counts[side_key] += 1
+
+        for tf, actual_f in actuals.items():
+            raw[side_key][tf]['total'] += 1
+            if (side_key == 'BUY' and actual_f > price) or (side_key == 'SELL' and actual_f < price):
+                raw[side_key][tf]['hit'] += 1
+
+        for tf, ai_dir in ai_dirs.items():
+            if not ai_dir:
+                continue
+            actual_f   = actuals[tf]
+            actual_dir = 'UP' if actual_f > price else 'DOWN'
+            ai_st[tf]['total'] += 1
+            if ai_dir == actual_dir:
+                ai_st[tf]['hit'] += 1
+
+        if len(cases) < 50:
+            case_results = {}
+            for tf, ai_dir in ai_dirs.items():
+                actual_f   = actuals[tf]
+                actual_pct = round((actual_f - price) / price * 100, 2)
+                actual_dir = 'UP' if actual_f > price else ('DOWN' if actual_f < price else '-')
+                is_hit     = actual_dir != '-' and ai_dir == actual_dir
+                case_results[tf] = {'ai_dir': ai_dir, 'actual_pct': actual_pct, 'is_hit': is_hit}
+            cases.append({
+                'ts':      ts_kst.strftime('%m/%d %H:%M'),
+                'side':    side_key,  # 'BUY' or 'SELL'
+                'amount':  float(amount),
+                'results': case_results,
+            })
+
+    def _pct(s):
+        return round(s['hit'] / s['total'] * 100, 1) if s['total'] > 0 else 0.0
+
+    def _weighted_pct(tf):
+        total = raw['BUY'][tf]['total'] + raw['SELL'][tf]['total']
+        hit   = raw['BUY'][tf]['hit']   + raw['SELL'][tf]['hit']
+        return round(hit / total * 100, 1) if total > 0 else 0.0
+
+    result = {
+        'buy_count':   side_counts['BUY'],
+        'sell_count':  side_counts['SELL'],
+        'raw_buy':     {'1m': _pct(raw['BUY']['1m']),  '5m': _pct(raw['BUY']['5m']),  '30m': _pct(raw['BUY']['30m'])},
+        'raw_sell':    {'1m': _pct(raw['SELL']['1m']), '5m': _pct(raw['SELL']['5m']), '30m': _pct(raw['SELL']['30m'])},
+        'raw_overall': {'1m': _weighted_pct('1m'), '5m': _weighted_pct('5m'), '30m': _weighted_pct('30m')},
+        'ai_acc':      {'1m': _pct(ai_st['1m']), '5m': _pct(ai_st['5m']), '30m': _pct(ai_st['30m'])},
+        'cases':       cases,
+        'total_cases': side_counts['BUY'] + side_counts['SELL'],
+    }
+    _trust_cache[coin] = (result, time.time())
+    return result
+
+
+_signal_trust_cache: dict = {}
+_SIGNAL_TRUST_TTL = 3600  # 1시간
+
+def _build_tf_stats(rows, tf_col, price_col, kst):
+    def _st(): return {'hit': 0, 'total': 0}
+    hourly = {h: _st() for h in range(24)}
+    dirs   = {'BUY': _st(), 'SELL': _st()}
+    trends = {'down': _st(), 'flat': _st(), 'up': _st()}
+    ratios = {'buy_dom': _st(), 'neutral': _st(), 'sell_dom': _st()}
+    combos = {}
+
+    for row in rows:
+        ts, price, side, _, dirs_row, actuals_row, price_before, buy_ratio_val = row
+        ai_dir     = dirs_row[tf_col]
+        actual_val = actuals_row[tf_col]
+        if ai_dir is None or actual_val is None: continue
+
+        ts_kst   = ts.astimezone(kst) if ts.tzinfo else ts.replace(tzinfo=timezone.utc).astimezone(kst)
+        act_dir  = 'UP' if float(actual_val) > float(price) else 'DOWN'
+        is_hit   = (ai_dir == act_dir)
+        hour     = ts_kst.hour
+        side_key = 'BUY' if side == 'BID' else 'SELL'
+
+        hourly[hour]['total'] += 1
+        if is_hit: hourly[hour]['hit'] += 1
+        dirs[side_key]['total'] += 1
+        if is_hit: dirs[side_key]['hit'] += 1
+
+        if price_before is not None:
+            pct   = (float(price) - float(price_before)) / float(price_before) * 100
+            trend = 'down' if pct < -0.05 else ('up' if pct > 0.05 else 'flat')
+        else:
+            trend = 'flat'
+        trends[trend]['total'] += 1
+        if is_hit: trends[trend]['hit'] += 1
+
+        br_f = float(buy_ratio_val) if buy_ratio_val is not None else 0.5
+        cat  = 'buy_dom' if br_f > 0.6 else ('sell_dom' if br_f < 0.4 else 'neutral')
+        ratios[cat]['total'] += 1
+        if is_hit: ratios[cat]['hit'] += 1
+
+        ck = f"{trend}_{side_key}"
+        if ck not in combos: combos[ck] = _st()
+        combos[ck]['total'] += 1
+        if is_hit: combos[ck]['hit'] += 1
+
+    def _pct(d):
+        return round(d['hit'] / d['total'] * 100, 1) if d['total'] > 0 else None
+
+    total_all   = sum(dirs[k]['total'] for k in dirs)
+    total_hit   = sum(hourly[h]['hit'] for h in range(24))
+    overall_acc = round(total_hit / total_all * 100, 1) if total_all > 0 else None
+
+    h_data   = [(h, _pct(hourly[h]), hourly[h]['total']) for h in range(24) if hourly[h]['total'] >= 5]
+    h_sorted = sorted(h_data, key=lambda x: x[1] if x[1] else 0, reverse=True)
+
+    dir_pct        = {k: _pct(dirs[k])   or 0 for k in dirs}
+    trend_pct      = {k: _pct(trends[k]) or 0 for k in trends}
+    ratio_pct      = {k: _pct(ratios[k]) or 0 for k in ratios}
+    combo_pct      = {k: _pct(combos[k]) or 0 for k in combos if combos[k]['total'] >= 10}
+
+    return {
+        'total':          total_all,
+        'overall_acc':    overall_acc,
+        'hourly':         {str(h): {'acc': _pct(hourly[h]), 'cnt': hourly[h]['total']} for h in range(24)},
+        'direction':      {k: {'acc': _pct(dirs[k]),   'cnt': dirs[k]['total']}   for k in dirs},
+        'price_trend':    {k: {'acc': _pct(trends[k]), 'cnt': trends[k]['total']} for k in trends},
+        'buy_ratio':      {k: {'acc': _pct(ratios[k]), 'cnt': ratios[k]['total']} for k in ratios},
+        'combination':    {k: {'acc': _pct(combos[k]), 'cnt': combos[k]['total']} for k in combos},
+        'best_hours':     [{'h': h, 'acc': a, 'cnt': c} for h, a, c in h_sorted[:3]],
+        'worst_hours':    [{'h': h, 'acc': a, 'cnt': c} for h, a, c in h_sorted[-3:]],
+        'best_dir':       max(dir_pct,   key=dir_pct.get)   if dir_pct   else 'BUY',
+        'best_trend':     max(trend_pct, key=trend_pct.get) if trend_pct else 'down',
+        'worst_trend':    min(trend_pct, key=trend_pct.get) if trend_pct else 'up',
+        'best_buy_ratio': max(ratio_pct, key=ratio_pct.get) if ratio_pct else 'buy_dom',
+        'best_combo':     max(combo_pct, key=combo_pct.get) if combo_pct else None,
+        'worst_combo':    min(combo_pct, key=combo_pct.get) if combo_pct else None,
+    }
+
+
+@app.get("/predict/signal_trust")
+def get_signal_trust(coin: str = "KRW-BTC"):
+    now = time.time()
+    cached = _signal_trust_cache.get(coin)
+    if cached and now - cached[1] < _SIGNAL_TRUST_TTL:
+        return cached[0]
+
+    kst = timezone(timedelta(hours=9))
+    conn = _db(); cur = conn.cursor()
+
+    cur.execute("""
+        WITH preds AS (
+            SELECT timestamp, price, side, total_amount,
+                   direction_1m, direction_5m, direction_30m
+            FROM backtest_log
+            WHERE coin = %s
+              AND direction_1m  IS NOT NULL
+              AND direction_5m  IS NOT NULL
+              AND direction_30m IS NOT NULL
+              AND timestamp < NOW() - INTERVAL '35 min'
+        )
+        SELECT
+            p.timestamp,
+            p.price::float,
+            p.side,
+            p.total_amount::float,
+            ARRAY[p.direction_1m, p.direction_5m, p.direction_30m],
+            ARRAY[t1m.price::float, t5m.price::float, t30m.price::float],
+            tbf.price::float  AS price_before,
+            COALESCE(br.buy_amt / NULLIF(br.total_amt, 0), 0.5) AS buy_ratio
+        FROM preds p
+        LEFT JOIN LATERAL (
+            SELECT price FROM trades WHERE code = %s
+              AND timestamp >= p.timestamp + INTERVAL '1 min'
+              AND timestamp <  p.timestamp + INTERVAL '3 min'
+            ORDER BY timestamp LIMIT 1
+        ) t1m ON true
+        LEFT JOIN LATERAL (
+            SELECT price FROM trades WHERE code = %s
+              AND timestamp >= p.timestamp + INTERVAL '5 min'
+              AND timestamp <  p.timestamp + INTERVAL '8 min'
+            ORDER BY timestamp LIMIT 1
+        ) t5m ON true
+        LEFT JOIN LATERAL (
+            SELECT price FROM trades WHERE code = %s
+              AND timestamp >= p.timestamp + INTERVAL '30 min'
+              AND timestamp <  p.timestamp + INTERVAL '35 min'
+            ORDER BY timestamp LIMIT 1
+        ) t30m ON true
+        LEFT JOIN LATERAL (
+            SELECT price FROM trades WHERE code = %s
+              AND timestamp <= p.timestamp - INTERVAL '10 min'
+            ORDER BY timestamp DESC LIMIT 1
+        ) tbf ON true
+        LEFT JOIN LATERAL (
+            SELECT
+                SUM(CASE WHEN side = 'BID' THEN total_amount ELSE 0 END) AS buy_amt,
+                SUM(total_amount) AS total_amt
+            FROM trades WHERE code = %s
+              AND timestamp >= p.timestamp - INTERVAL '5 min'
+              AND timestamp <  p.timestamp
+        ) br ON true
+        WHERE t1m.price IS NOT NULL
+        ORDER BY p.timestamp DESC
+    """, (coin, coin, coin, coin, coin, coin))
+
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+
+    result = {
+        '1m':  _build_tf_stats(rows, 0, 0, kst),
+        '5m':  _build_tf_stats(rows, 1, 1, kst),
+        '30m': _build_tf_stats(rows, 2, 2, kst),
+    }
+
+    _signal_trust_cache[coin] = (result, time.time())
     return result
 
 
