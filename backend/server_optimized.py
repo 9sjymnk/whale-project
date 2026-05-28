@@ -1248,22 +1248,22 @@ def get_predict_accuracy(coin: str = "KRW-BTC"):
         LEFT JOIN LATERAL (
             SELECT price FROM trades
             WHERE code = %s
-              AND timestamp >= p.timestamp + INTERVAL '1 min'
-              AND timestamp <  p.timestamp + INTERVAL '3 min'
+              AND timestamp >= p.timestamp + INTERVAL '30 sec'
+              AND timestamp <  p.timestamp + INTERVAL '5 min'
             ORDER BY timestamp LIMIT 1
         ) t1 ON true
         LEFT JOIN LATERAL (
             SELECT price FROM trades
             WHERE code = %s
-              AND timestamp >= p.timestamp + INTERVAL '5 min'
-              AND timestamp <  p.timestamp + INTERVAL '8 min'
+              AND timestamp >= p.timestamp + INTERVAL '4 min'
+              AND timestamp <  p.timestamp + INTERVAL '10 min'
             ORDER BY timestamp LIMIT 1
         ) t5 ON true
         LEFT JOIN LATERAL (
             SELECT price FROM trades
             WHERE code = %s
-              AND timestamp >= p.timestamp + INTERVAL '30 min'
-              AND timestamp <  p.timestamp + INTERVAL '35 min'
+              AND timestamp >= p.timestamp + INTERVAL '28 min'
+              AND timestamp <  p.timestamp + INTERVAL '40 min'
             ORDER BY timestamp LIMIT 1
         ) t30 ON true
         ORDER BY p.timestamp DESC
@@ -1375,22 +1375,22 @@ def get_trust_stats(coin: str = "KRW-BTC"):
         LEFT JOIN LATERAL (
             SELECT price FROM trades
             WHERE code = %s
-              AND timestamp >= p.timestamp + INTERVAL '1 min'
-              AND timestamp <  p.timestamp + INTERVAL '3 min'
+              AND timestamp >= p.timestamp + INTERVAL '30 sec'
+              AND timestamp <  p.timestamp + INTERVAL '5 min'
             ORDER BY timestamp LIMIT 1
         ) t1 ON true
         LEFT JOIN LATERAL (
             SELECT price FROM trades
             WHERE code = %s
-              AND timestamp >= p.timestamp + INTERVAL '5 min'
-              AND timestamp <  p.timestamp + INTERVAL '8 min'
+              AND timestamp >= p.timestamp + INTERVAL '4 min'
+              AND timestamp <  p.timestamp + INTERVAL '10 min'
             ORDER BY timestamp LIMIT 1
         ) t5 ON true
         LEFT JOIN LATERAL (
             SELECT price FROM trades
             WHERE code = %s
-              AND timestamp >= p.timestamp + INTERVAL '30 min'
-              AND timestamp <  p.timestamp + INTERVAL '35 min'
+              AND timestamp >= p.timestamp + INTERVAL '28 min'
+              AND timestamp <  p.timestamp + INTERVAL '40 min'
             ORDER BY timestamp LIMIT 1
         ) t30 ON true
         ORDER BY p.timestamp DESC
@@ -1581,20 +1581,20 @@ def get_signal_trust(coin: str = "KRW-BTC"):
         FROM preds p
         LEFT JOIN LATERAL (
             SELECT price FROM trades WHERE code = %s
-              AND timestamp >= p.timestamp + INTERVAL '1 min'
-              AND timestamp <  p.timestamp + INTERVAL '3 min'
+              AND timestamp >= p.timestamp + INTERVAL '30 sec'
+              AND timestamp <  p.timestamp + INTERVAL '5 min'
             ORDER BY timestamp LIMIT 1
         ) t1m ON true
         LEFT JOIN LATERAL (
             SELECT price FROM trades WHERE code = %s
-              AND timestamp >= p.timestamp + INTERVAL '5 min'
-              AND timestamp <  p.timestamp + INTERVAL '8 min'
+              AND timestamp >= p.timestamp + INTERVAL '4 min'
+              AND timestamp <  p.timestamp + INTERVAL '10 min'
             ORDER BY timestamp LIMIT 1
         ) t5m ON true
         LEFT JOIN LATERAL (
             SELECT price FROM trades WHERE code = %s
-              AND timestamp >= p.timestamp + INTERVAL '30 min'
-              AND timestamp <  p.timestamp + INTERVAL '35 min'
+              AND timestamp >= p.timestamp + INTERVAL '28 min'
+              AND timestamp <  p.timestamp + INTERVAL '40 min'
             ORDER BY timestamp LIMIT 1
         ) t30m ON true
         LEFT JOIN LATERAL (
@@ -1611,6 +1611,8 @@ def get_signal_trust(coin: str = "KRW-BTC"):
               AND timestamp <  p.timestamp
         ) br ON true
         WHERE t1m.price IS NOT NULL
+          AND t5m.price IS NOT NULL
+          AND t30m.price IS NOT NULL
         ORDER BY p.timestamp DESC
     """, (coin, coin, coin, coin, coin, coin))
 
