@@ -1,6 +1,6 @@
 # 프로젝트 네이밍 컨벤션 & 구조 가이드
 
-> Whale Watcher 프로젝트의 파일명, 폴더명, 코드 내 식별자 작성 규칙을 정의합니다.
+> WhaleScope 프로젝트의 파일명, 폴더명, 코드 내 식별자 작성 규칙을 정의합니다.
 > 새 파일·기능을 추가할 때 이 문서를 기준으로 통일합니다.
 
 ---
@@ -11,27 +11,15 @@
 
 ```
 whale-project/
-├── backend/          # FastAPI 서버 (API 엔드포인트, WebSocket, 인증)
-├── frontend/         # 단일 HTML/CSS/JS 앱
-├── collector/        # 업비트 WebSocket 수집기
-├── analyzer/         # 거래 데이터 분석 모듈
-├── dashboard/        # Streamlit 운영 대시보드
-├── utils/            # DB 점검·조회용 일회성 스크립트
-├── data/             # PostgreSQL 볼륨 (Git 제외)
-├── docs/             # 기술 문서, 다이어그램 ← 신규
-├── tests/            # 단위·통합 테스트 ← 신규
-└── models/           # 학습된 ML 모델 파일 (.pkl 등) ← 신규 (백로그 10~11)
+├── backend/          # FastAPI 서버 (API 엔드포인트, WebSocket, 인증, AI 서빙)
+├── frontend/         # 단일 HTML/CSS/JS 앱 (SPA)
+├── collector/        # 업비트 WebSocket 수집기 (AWS EC2)
+├── analyzer/         # 피처 엔지니어링 및 ML 모델 학습
+├── data/             # PostgreSQL 볼륨 및 학습 데이터 (Git 제외)
+├── docs/             # 기술 문서, 다이어그램, 목업
+├── tests/            # 단위·통합 테스트
+└── models/           # 학습된 ML 모델 파일 (.pkl)
 ```
-
-### 추가 권장 폴더 설명
-
-| 폴더      | 목적                                  | 예시 파일                             |
-| --------- | ------------------------------------- | ------------------------------------- |
-| `docs/`   | 아키텍처 다이어그램, API 명세, 회의록 | `architecture.md`, `api-spec.md`      |
-| `tests/`  | 각 모듈별 pytest 테스트 코드          | `test_server.py`, `test_analyzer.py`  |
-| `models/` | 학습 완료 모델 바이너리               | `xgboost_btc_1m.pkl`, `rf_eth_5m.pkl` |
-
-> `docs/` 폴더로 이동 권장: 현재 루트의 `tech-stack-description.txt`, `tech-stack-diagram.html`
 
 ---
 
@@ -43,15 +31,13 @@ whale-project/
 - 역할이 명확하게 드러나는 이름 사용. 폴더명과 중복 금지.
 
 ```
-✅ collector_upbit.py   ← 역할 명시
-✅ collector_aws.py
-✅ trade_analyzer.py    ← 폴더명(analyzer)과 중복 X
-✅ server.py
-✅ check_db.py
+✅ collector_aws.py        ← 역할 명시
+✅ feature_engineering.py
+✅ server_optimized.py
+✅ train_model.py
 
-❌ main.py              ← 역할 불명확
-❌ analyzer.py          ← 폴더명(analyzer/)과 중복
-❌ dashboard.py         ← 폴더명(dashboard/)과 중복
+❌ main.py                 ← 역할 불명확
+❌ analyzer.py             ← 폴더명(analyzer/)과 중복
 ```
 
 ### HTML / CSS / JS (`.html`, `.css`, `.js`)
@@ -99,7 +85,7 @@ whale-project/
 | 변수                | `snake_case`                | `open_price`, `trade_id`           |
 | 함수                | `snake_case`                | `get_daily_whale_log()`            |
 | 클래스              | `PascalCase`                | `UserRegister`, `TradeEvent`       |
-| 상수                | `SCREAMING_SNAKE_CASE`      | `DB_CONFIG`, `KAFKA_TOPIC`, `KST`  |
+| 상수                | `SCREAMING_SNAKE_CASE`      | `DB_CONFIG`, `WHALE_THRESHOLD`, `KST`  |
 | Private 함수/변수   | `_leading_underscore`       | `_db()`, `_hash()`, `_verify()`    |
 | FastAPI 라우터 함수 | `snake_case` + 동사 or 명사 | `get_hourly_whale()`, `register()` |
 
@@ -132,7 +118,7 @@ def get_daily_whale_log(coin: str):       # public 함수 (동사+명사)
 
 ```javascript
 // ✅ 올바른 예시
-const API_BASE = 'http://localhost:8000';    // 상수
+const API_BASE = 'http://localhost:8001';    // 상수
 
 let whaleLogExpanded = false;               // 상태 변수 (camelCase)
 let whaleHourlyData  = [];
@@ -230,13 +216,12 @@ update stuff               ← 내용 불명확
 
 ## 8. 파일명 변경 이력
 
-| 이전                         | 이후                           | 비고    |
-| ---------------------------- | ------------------------------ | ------- |
-| `collector/main.py`          | `collector/collector_upbit.py` | ✅ 완료 |
-| `collector/main_aws.py`      | `collector/collector_aws.py`   | ✅ 완료 |
-| `analyzer/analyzer.py`       | `analyzer/trade_analyzer.py`   | ✅ 완료 |
-| `dashboard/dashboard.py`     | `dashboard/streamlit_app.py`   | ✅ 완료 |
-| `tech-stack-description.txt` | `docs/tech-stack.md`           | ✅ 완료 |
-| `tech-stack-diagram.html`    | `docs/tech-stack-diagram.html` | ✅ 완료 |
-| `AgileProcess_6팀.xlsx`      | `docs/AgileProcess_6팀.xlsx`   | ✅ 완료 |
-| `Whale-Collector(KEY).pem`   | `whale-collector-key.pem`      | ✅ 완료 |
+| 이전                         | 이후                            | 비고    |
+| ---------------------------- | ------------------------------- | ------- |
+| `collector/main_aws.py`      | `collector/collector_aws.py`    | ✅ 완료 |
+| `tech-stack-description.txt` | `docs/tech-stack.md`            | ✅ 완료 |
+| `tech-stack-diagram.html`    | `docs/tech-stack-diagram.html`  | ✅ 완료 |
+| `AgileProcess_6팀.xlsx`      | `docs/AgileProcess_6팀.xlsx`    | ✅ 완료 |
+| `Whale-Collector(KEY).pem`   | `whale-collector-key.pem`       | ✅ 완료 |
+| `backend/server.py`          | `backend/server_legacy.py`      | ✅ 완료 |
+| `frontend/index.html`        | `frontend/index_legacy.html`    | ✅ 완료 |

@@ -1,8 +1,8 @@
-<!doctype html>
+﻿<!doctype html>
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>Whale Watcher Pro</title>
+    <title>WhaleScope</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
@@ -11,17 +11,17 @@
     <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
     <style>
       :root {
-        --sidebar-bg: #161a1e;
-        --main-bg: #0b0e11;
-        --card-bg: #1e2329;
-        --text: #eaecef;
-        --text-secondary: #848e9c;
-        --border: #2b3139;
-        --up: #f6465d;
-        --down: #3165df;
-        --whale-buy: #00ff41;
-        --accent: #f0b90b;
-        --chart-line: #c3a634;
+        --sidebar-bg: #010409;
+        --main-bg: #0d1117;
+        --card-bg: #161b22;
+        --text: #e6edf3;
+        --text-secondary: #7d8590;
+        --border: #21262d;
+        --up: #f85149;
+        --down: #388bfd;
+        --whale-buy: #3fb950;
+        --accent: #4f8ef7;
+        --chart-line: #4f8ef7;
         --navbar-h: 56px;
       }
 
@@ -119,12 +119,12 @@
       }
       .nav-auth-btn:hover {
         color: var(--text);
-        border-color: #3d4451;
+        border-color: #30363d;
       }
       .nav-auth-btn.primary {
         background: var(--accent);
         border-color: var(--accent);
-        color: #0b0e11;
+        color: #fff;
       }
       .nav-auth-btn.primary:hover {
         opacity: 0.88;
@@ -157,7 +157,7 @@
         justify-content: center;
         font-size: 0.78rem;
         font-weight: 700;
-        color: #0b0e11;
+        color: #fff;
         flex-shrink: 0;
       }
       .nav-username {
@@ -197,7 +197,7 @@
         justify-content: center;
         font-size: 1.8rem;
         font-weight: 700;
-        color: #0b0e11;
+        color: #fff;
         flex-shrink: 0;
       }
       .profile-name {
@@ -248,9 +248,9 @@
       }
       .profile-badge {
         font-size: 0.72rem;
-        background: rgba(240, 185, 11, 0.12);
+        background: rgba(79, 142, 247, 0.12);
         color: var(--accent);
-        border: 1px solid rgba(240, 185, 11, 0.3);
+        border: 1px solid rgba(79, 142, 247, 0.3);
         padding: 3px 10px;
         border-radius: 20px;
         font-weight: 700;
@@ -282,7 +282,7 @@
       }
       .profile-action-btn.danger:hover {
         border-color: var(--up);
-        background: rgba(246, 70, 93, 0.06);
+        background: rgba(248, 81, 73, 0.06);
       }
 
       /* ── PAGES ── */
@@ -329,7 +329,7 @@
       }
       .hero-cta {
         background: var(--accent);
-        color: #0b0e11;
+        color: #fff;
         border: none;
         border-radius: 10px;
         padding: 15px 36px;
@@ -463,7 +463,7 @@
       }
       .chart-btn.active {
         background: var(--accent);
-        color: #0b0e11;
+        color: #fff;
       }
 
       .currency-info {
@@ -490,7 +490,7 @@
         background: var(--accent);
         border-radius: 50%;
         cursor: pointer;
-        box-shadow: 0 0 6px rgba(240, 185, 11, 0.5);
+        box-shadow: 0 0 6px rgba(79, 142, 247, 0.5);
       }
       #th_val {
         text-align: right;
@@ -512,7 +512,7 @@
         width: 7px;
         height: 7px;
         border-radius: 50%;
-        background: #0ecb81;
+        background: #3fb950;
         animation: pulse 2s infinite;
         flex-shrink: 0;
       }
@@ -520,7 +520,7 @@
         0%,
         100% {
           opacity: 1;
-          box-shadow: 0 0 4px #0ecb81;
+          box-shadow: 0 0 4px #3fb950;
         }
         50% {
           opacity: 0.5;
@@ -554,9 +554,9 @@
       }
       .live-badge {
         font-size: 0.62rem;
-        background: rgba(14, 203, 129, 0.12);
-        color: #0ecb81;
-        border: 1px solid rgba(14, 203, 129, 0.3);
+        background: rgba(63, 185, 80, 0.12);
+        color: #3fb950;
+        border: 1px solid rgba(63, 185, 80, 0.3);
         padding: 3px 10px;
         border-radius: 20px;
         font-weight: 700;
@@ -592,7 +592,7 @@
         background: linear-gradient(90deg, var(--accent), transparent);
       }
       .metric-card:hover {
-        border-color: #3d4451;
+        border-color: #30363d;
         transform: translateY(-1px);
       }
       .m-val {
@@ -620,7 +620,7 @@
       .ext-badge {
         display: inline-block;
         font-size: 0.58rem;
-        background: rgba(240,185,11,0.12);
+        background: rgba(79, 142, 247,0.12);
         color: var(--accent);
         padding: 1px 7px;
         border-radius: 4px;
@@ -631,7 +631,7 @@
       .fg-gauge-bg {
         height: 6px;
         border-radius: 3px;
-        background: linear-gradient(to right, #3165df, #848e9c, #f0b90b, #f6465d);
+        background: linear-gradient(to right, #f85149, #7d8590, #e09020, #3fb950);
         position: relative;
         margin: 8px 0 4px;
       }
@@ -696,7 +696,7 @@
         justify-content: space-between;
         font-size: 0.75rem;
         padding: 3px 0;
-        border-bottom: 1px solid rgba(43,49,57,0.5);
+        border-bottom: 1px solid rgba(33, 38, 45,0.5);
       }
       .kimchi-row:last-of-type { border-bottom: none; }
       .kimchi-exch { color: var(--text-secondary); }
@@ -738,7 +738,7 @@
         color: var(--text);
       }
       .timeframe-bar .chart-btn.active {
-        background: rgba(240, 185, 11, 0.12);
+        background: rgba(79, 142, 247, 0.12);
         border-color: var(--accent);
         color: var(--accent);
       }
@@ -760,7 +760,7 @@
         display: none;
         width: 185px;
         padding: 12px 14px;
-        background: rgba(22, 26, 30, 0.97);
+        background: rgba(13, 17, 23, 0.97);
         border: 1px solid var(--border);
         border-radius: 8px;
         color: var(--text);
@@ -810,11 +810,11 @@
         text-transform: uppercase;
         letter-spacing: 1.2px;
         font-weight: 600;
-        background: rgba(43, 49, 57, 0.4);
+        background: rgba(33, 38, 45, 0.4);
       }
       .log-table td {
         padding: 10px 16px;
-        border-bottom: 1px solid rgba(43, 49, 57, 0.5);
+        border-bottom: 1px solid rgba(33, 38, 45, 0.5);
         font-family: 'JetBrains Mono', monospace;
         font-size: 0.79rem;
         color: var(--text);
@@ -826,7 +826,7 @@
         cursor: pointer;
       }
       .log-table tbody tr:hover td {
-        background: rgba(240, 185, 11, 0.06);
+        background: rgba(79, 142, 247, 0.06);
       }
 
       .show-more-btn {
@@ -843,7 +843,7 @@
         letter-spacing: 0.3px;
       }
       .show-more-btn:hover {
-        background: rgba(43, 49, 57, 0.35);
+        background: rgba(33, 38, 45, 0.35);
         color: var(--text);
       }
 
@@ -960,7 +960,7 @@
         justify-content: space-between;
         align-items: center;
         padding: 8px 0;
-        border-bottom: 1px solid rgba(43, 49, 57, 0.4);
+        border-bottom: 1px solid rgba(33, 38, 45, 0.4);
         font-family: 'JetBrains Mono', monospace;
         font-size: 0.82rem;
       }
@@ -1065,7 +1065,7 @@
       .auth-submit-btn {
         width: 100%;
         background: var(--accent);
-        color: #0b0e11;
+        color: #fff;
         border: none;
         border-radius: 9px;
         padding: 13px;
@@ -1326,11 +1326,11 @@
         border-radius: 4px;
       }
       .ai-level-badge.high {
-        background: rgba(0, 255, 65, 0.15);
-        color: #00ff41;
+        background: rgba(63, 185, 80, 0.15);
+        color: #3fb950;
       }
       .ai-level-badge.med {
-        background: rgba(240, 185, 11, 0.15);
+        background: rgba(79, 142, 247, 0.15);
         color: var(--accent);
       }
       .ai-level-badge.low {
@@ -1390,7 +1390,7 @@
       .bt-seg.active {
         border-color: var(--accent);
         color: var(--accent);
-        background: rgba(240,185,11,0.08);
+        background: rgba(79, 142, 247,0.08);
       }
       .bt-date-input {
         background: var(--card-bg);
@@ -1404,7 +1404,7 @@
       }
       .bt-apply-btn {
         background: var(--accent);
-        color: #000;
+        color: #fff;
         border: none;
         padding: 7px 16px;
         border-radius: 6px;
@@ -1483,7 +1483,7 @@
       .bt-td {
         padding: 9px 10px;
         font-size: 0.82rem;
-        border-bottom: 1px solid rgba(43,49,57,0.5);
+        border-bottom: 1px solid rgba(33, 38, 45,0.5);
         font-family: 'JetBrains Mono', monospace;
       }
       .bt-badge {
@@ -1494,25 +1494,25 @@
         font-weight: 700;
         font-family: inherit;
       }
-      .bt-badge-buy  { background: rgba(246,70,93,0.15);  color: var(--up); }
-      .bt-badge-sell { background: rgba(49,101,223,0.15); color: var(--down); }
+      .bt-badge-buy  { background: rgba(248, 81, 73,0.15);  color: var(--up); }
+      .bt-badge-sell { background: rgba(56, 139, 253,0.15); color: var(--down); }
 
       /* ── 신뢰도 패널 ── */
       .bt-trust-step { display:flex; align-items:flex-start; gap:10px; margin-bottom:14px; }
-      .bt-trust-step-num { width:22px; height:22px; border-radius:50%; background:rgba(240,185,11,0.15); color:var(--accent); font-size:0.72rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+      .bt-trust-step-num { width:22px; height:22px; border-radius:50%; background:rgba(79, 142, 247,0.15); color:var(--accent); font-size:0.72rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
       .bt-trust-divider { border:none; border-top:1px solid var(--border); margin:20px 0; }
       .bt-trust-more-btn { background:none; border:1px dashed var(--border); color:var(--text-secondary); width:100%; padding:9px; border-radius:8px; font-size:0.78rem; cursor:pointer; margin-top:4px; }
       .bt-trust-more-btn:hover { border-color:var(--accent); color:var(--accent); }
       .bt-trust-case { background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:14px 18px; display:grid; grid-template-columns:130px 1fr auto; gap:16px; align-items:center; margin-bottom:10px; }
-      .bt-trust-tf-tag { background:rgba(240,185,11,0.1); color:var(--accent); padding:1px 7px; border-radius:4px; font-size:0.68rem; font-weight:600; width:40px; text-align:center; flex-shrink:0; white-space:nowrap; display:inline-block; }
+      .bt-trust-tf-tag { background:rgba(79, 142, 247,0.1); color:var(--accent); padding:1px 7px; border-radius:4px; font-size:0.68rem; font-weight:600; width:40px; text-align:center; flex-shrink:0; white-space:nowrap; display:inline-block; }
 
       /* ── 신호 신뢰도 PAGE ── */
       .sg-insight-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px; }
       .sg-insight-card { background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:18px 20px; }
-      .sg-insight-card.hl { border-color:rgba(240,185,11,0.4); background:linear-gradient(135deg,rgba(240,185,11,0.04) 0%,transparent 60%); }
+      .sg-insight-card.hl { border-color:rgba(79, 142, 247,0.4); background:linear-gradient(135deg,rgba(79, 142, 247,0.04) 0%,transparent 60%); }
       .sg-badge { display:inline-block; font-size:0.62rem; font-weight:700; padding:2px 8px; border-radius:4px; margin-bottom:8px; letter-spacing:0.5px; }
-      .sg-badge-hi  { background:rgba(0,255,65,0.12); color:var(--whale-buy); border:1px solid rgba(0,255,65,0.25); }
-      .sg-badge-med { background:rgba(240,185,11,0.12); color:var(--accent); border:1px solid rgba(240,185,11,0.25); }
+      .sg-badge-hi  { background:rgba(63, 185, 80,0.12); color:var(--whale-buy); border:1px solid rgba(63, 185, 80,0.25); }
+      .sg-badge-med { background:rgba(79, 142, 247,0.12); color:var(--accent); border:1px solid rgba(79, 142, 247,0.25); }
       .sg-hour-wrap { display:flex; gap:3px; align-items:flex-end; height:155px; padding:0 4px; }
       .sg-hour-col  { display:flex; flex-direction:column; align-items:center; gap:4px; flex:1; }
       .sg-hour-bar  { border-radius:3px 3px 0 0; width:100%; }
@@ -1520,13 +1520,13 @@
       .sg-compare-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:20px; }
       .sg-compare-row { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
       .sg-compare-row:last-child { margin-bottom:0; }
-      .sg-bar-track { flex:1; height:9px; background:rgba(43,49,57,0.8); border-radius:5px; overflow:hidden; }
+      .sg-bar-track { flex:1; height:9px; background:rgba(33, 38, 45,0.8); border-radius:5px; overflow:hidden; }
       .sg-bar-fill  { height:100%; border-radius:5px; }
       .sg-combo-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-      .sg-guide-box { margin-top:20px; border:1px solid rgba(0,255,65,0.2); border-radius:12px; background:rgba(0,255,65,0.03); padding:20px 24px; }
-      .sg-warn-box  { margin-top:12px; border:1px solid rgba(246,70,93,0.2); border-radius:12px; background:rgba(246,70,93,0.03); padding:18px 24px; }
-      .sg-chip-good { background:rgba(0,255,65,0.08); border:1px solid rgba(0,255,65,0.2); border-radius:20px; padding:5px 14px; font-size:0.78rem; color:var(--whale-buy); font-weight:600; }
-      .sg-chip-bad  { background:rgba(246,70,93,0.08); border:1px solid rgba(246,70,93,0.2); border-radius:20px; padding:5px 14px; font-size:0.78rem; color:var(--up); font-weight:600; }
+      .sg-guide-box { margin-top:20px; border:1px solid rgba(63, 185, 80,0.2); border-radius:12px; background:rgba(63, 185, 80,0.03); padding:20px 24px; }
+      .sg-warn-box  { margin-top:12px; border:1px solid rgba(248, 81, 73,0.2); border-radius:12px; background:rgba(248, 81, 73,0.03); padding:18px 24px; }
+      .sg-chip-good { background:rgba(63, 185, 80,0.08); border:1px solid rgba(63, 185, 80,0.2); border-radius:20px; padding:5px 14px; font-size:0.78rem; color:var(--whale-buy); font-weight:600; }
+      .sg-chip-bad  { background:rgba(248, 81, 73,0.08); border:1px solid rgba(248, 81, 73,0.2); border-radius:20px; padding:5px 14px; font-size:0.78rem; color:var(--up); font-weight:600; }
 
       /* ── AI 예측현황 PAGE ── */
       .ai-acc-card {
@@ -1585,13 +1585,13 @@
         font-weight: 700;
         font-family: inherit;
       }
-      .ai-badge-up   { background: rgba(246,70,93,0.15);  color: var(--up); }
-      .ai-badge-down { background: rgba(49,101,223,0.15); color: var(--down); }
-      .ai-badge-ok   { background: rgba(0,255,65,0.1);   color: var(--whale-buy); }
-      .ai-badge-fail { background: rgba(246,70,93,0.1);   color: var(--up); }
+      .ai-badge-up   { background: rgba(248, 81, 73,0.15);  color: var(--up); }
+      .ai-badge-down { background: rgba(56, 139, 253,0.15); color: var(--down); }
+      .ai-badge-ok   { background: rgba(63, 185, 80,0.1);   color: var(--whale-buy); }
+      .ai-badge-fail { background: rgba(248, 81, 73,0.1);   color: var(--up); }
       .ai-tf-card { transition: border-color 0.15s; }
-      .ai-tf-card:hover { border-color: rgba(240,185,11,0.5); }
-      .ai-tf-card.active-tf { border-color: var(--accent); background: rgba(240,185,11,0.04); }
+      .ai-tf-card:hover { border-color: rgba(79, 142, 247,0.5); }
+      .ai-tf-card.active-tf { border-color: var(--accent); background: rgba(79, 142, 247,0.04); }
       .ai-hour-col { cursor: pointer; border-radius: 3px; transition: opacity 0.15s; }
       .ai-hour-col:hover { opacity: 0.75; }
       .ai-hour-col.ai-selected .ai-hour-bar { outline: 2px solid var(--accent); border-radius: 3px; }
@@ -1602,7 +1602,7 @@
     <nav id="navbar">
       <div class="nav-left">
         <div class="nav-logo" onclick="showPage('landing')">
-          <span>🐳</span> Whale Watcher
+          <span>🐳</span> WhaleScope
         </div>
         <div class="nav-divider"></div>
         <button
@@ -1610,7 +1610,7 @@
           id="nav_exchange_btn"
           onclick="showPage('exchange')"
         >
-          거래소
+          대시보드
         </button>
         <button class="nav-link" id="nav_whale_btn" onclick="showPage('whale')">
           고래 분석
@@ -1697,12 +1697,12 @@
             <span id="slack_status" class="profile-row-value" style="color:var(--text-secondary);font-size:0.8rem;word-break:break-all;"></span>
             <div style="display:flex;gap:8px;width:100%;">
               <input id="slack_webhook_input" type="text" placeholder="https://hooks.slack.com/services/..."
-                style="flex:1;padding:7px 10px;border-radius:6px;border:1px solid #374151;background:#1a1d23;color:#eaecef;font-size:13px;outline:none;" />
+                style="flex:1;padding:7px 10px;border-radius:6px;border:1px solid #21262d;background:#161b22;color:#e6edf3;font-size:13px;outline:none;" />
               <button onclick="saveSlackWebhook()"
-                style="padding:7px 14px;border-radius:6px;border:none;background:#f0b90b;color:#000;font-weight:700;cursor:pointer;font-size:13px;white-space:nowrap;">저장</button>
+                style="padding:7px 14px;border-radius:6px;border:none;background:#4f8ef7;color:#fff;font-weight:700;cursor:pointer;font-size:13px;white-space:nowrap;">저장</button>
             </div>
             <button onclick="removeSlackWebhook()" id="slack_remove_btn"
-              style="display:none;padding:5px 10px;border-radius:6px;border:1px solid #374151;background:transparent;color:#848e9c;cursor:pointer;font-size:12px;">연동 해제</button>
+              style="display:none;padding:5px 10px;border-radius:6px;border:1px solid #374151;background:transparent;color:#7d8590;cursor:pointer;font-size:12px;">연동 해제</button>
           </div>
           <div class="profile-row">
             <span class="profile-row-label">💬 카카오톡</span>
@@ -1739,7 +1739,7 @@
           시장의 흐름을 한눈에 파악하세요
         </p>
         <button class="hero-cta" onclick="showPage('exchange')">
-          거래소 바로가기 →
+          대시보드 바로가기 →
         </button>
         <div class="hero-features">
           <div class="feature-card">
@@ -1891,14 +1891,14 @@
             <div class="m-lbl">비트코인 도미넌스</div>
             <div id="dom_btc" class="m-val" style="color:var(--accent)">--%</div>
             <div class="dom-bar-wrap">
-              <div id="dom_bar_btc" class="dom-seg" style="background:#f0b90b;opacity:0.85;width:50%"></div>
-              <div id="dom_bar_eth" class="dom-seg" style="background:#3165df;opacity:0.85;width:17%"></div>
-              <div id="dom_bar_etc" class="dom-seg" style="background:#848e9c;opacity:0.55;flex:1"></div>
+              <div id="dom_bar_btc" class="dom-seg" style="background:#f7931a;opacity:0.85;width:50%"></div>
+              <div id="dom_bar_eth" class="dom-seg" style="background:#388bfd;opacity:0.85;width:17%"></div>
+              <div id="dom_bar_etc" class="dom-seg" style="background:#7d8590;opacity:0.55;flex:1"></div>
             </div>
             <div class="dom-legend">
-              <span><span class="dom-dot" style="background:#f0b90b"></span>BTC <span id="dom_btc_pct">--%</span></span>
-              <span><span class="dom-dot" style="background:#3165df"></span>ETH <span id="dom_eth_pct">--%</span></span>
-              <span><span class="dom-dot" style="background:#848e9c"></span>기타 <span id="dom_etc_pct">--%</span></span>
+              <span><span class="dom-dot" style="background:#4f8ef7"></span>BTC <span id="dom_btc_pct">--%</span></span>
+              <span><span class="dom-dot" style="background:#388bfd"></span>ETH <span id="dom_eth_pct">--%</span></span>
+              <span><span class="dom-dot" style="background:#7d8590"></span>기타 <span id="dom_etc_pct">--%</span></span>
             </div>
             <div class="refresh-label"><span class="refresh-dot"></span>5분마다 갱신</div>
           </div>
@@ -2158,12 +2158,12 @@
       </div>
 
       <!-- 인라인 에러 메시지 -->
-      <div id="bt_error_bar" style="display:none; background:rgba(246,70,93,0.1); border:1px solid rgba(246,70,93,0.3); border-radius:8px; padding:10px 16px; margin-bottom:14px; font-size:0.84rem; color:var(--up);">
+      <div id="bt_error_bar" style="display:none; background:rgba(248, 81, 73,0.1); border:1px solid rgba(248, 81, 73,0.3); border-radius:8px; padding:10px 16px; margin-bottom:14px; font-size:0.84rem; color:var(--up);">
         <span id="bt_error_text"></span>
       </div>
 
       <!-- ── 신뢰도 패널 ── -->
-      <div id="bt_trust_wrap" style="border:1px solid rgba(240,185,11,0.25); border-radius:14px; background:linear-gradient(135deg,rgba(240,185,11,0.03) 0%,transparent 60%); padding:24px; margin-bottom:24px;">
+      <div id="bt_trust_wrap" style="border:1px solid rgba(79, 142, 247,0.25); border-radius:14px; background:linear-gradient(135deg,rgba(79, 142, 247,0.03) 0%,transparent 60%); padding:24px; margin-bottom:24px;">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
           <div style="font-size:0.9rem; font-weight:700; color:var(--accent);">🔍 예측 모델, 왜 신뢰할 수 있는가?</div>
           <button onclick="btToggleTrust()" id="bt_trust_toggle_btn" style="background:none;border:1px solid var(--border);color:var(--text-secondary);padding:3px 10px;border-radius:6px;font-size:0.75rem;cursor:pointer;">▲ 접기</button>
@@ -2197,7 +2197,7 @@
             <div style="font-size:0.78rem; font-weight:700;">
               AI는 이 패턴을 더 정교하게 잡는다
               <span
-                style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;border:1px solid rgba(240,185,11,0.5);color:var(--accent);font-size:0.68rem;font-weight:700;cursor:pointer;margin-left:7px;vertical-align:middle;"
+                style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;border:1px solid rgba(79, 142, 247,0.5);color:var(--accent);font-size:0.68rem;font-weight:700;cursor:pointer;margin-left:7px;vertical-align:middle;"
                 onmouseenter="showTrustSignalTooltip(event)"
                 onmouseleave="hideTrustSignalTooltip()"
               >ⓘ</span>
@@ -2381,7 +2381,7 @@
       </div>
 
       <!-- 로딩 / 오류 오버레이 -->
-      <div id="bt_loading" style="display:none; position:fixed; top:0;left:0;right:0;bottom:0; background:rgba(11,14,17,0.7); z-index:500; align-items:center; justify-content:center; flex-direction:column; gap:12px;">
+      <div id="bt_loading" style="display:none; position:fixed; top:0;left:0;right:0;bottom:0; background:rgba(13,17,23,0.7); z-index:500; align-items:center; justify-content:center; flex-direction:column; gap:12px;">
         <div style="font-size:1.5rem;">⏳</div>
         <div style="color:var(--accent); font-size:0.9rem; font-weight:600;">백테스팅 계산 중...</div>
         <div style="color:var(--text-secondary); font-size:0.8rem;">고래 신호마다 ML 모델 추론 중</div>
@@ -2395,7 +2395,7 @@
         <span style="font-size:1.05rem; font-weight:700;">AI 예측 현황</span>
       </div>
 
-      <div id="ai_error_bar" style="display:none; background:rgba(246,70,93,0.1); border:1px solid rgba(246,70,93,0.3); border-radius:8px; padding:10px 16px; margin-bottom:14px; font-size:0.84rem; color:var(--up);">
+      <div id="ai_error_bar" style="display:none; background:rgba(248, 81, 73,0.1); border:1px solid rgba(248, 81, 73,0.3); border-radius:8px; padding:10px 16px; margin-bottom:14px; font-size:0.84rem; color:var(--up);">
         <span id="ai_error_text"></span>
       </div>
 
@@ -2498,7 +2498,7 @@
       </div>
 
       <div id="sg_loading" style="text-align:center; padding:60px; color:var(--text-secondary); font-size:0.9rem;">데이터 로딩 중...</div>
-      <div id="sg_error" style="display:none; background:rgba(246,70,93,0.1); border:1px solid rgba(246,70,93,0.3); border-radius:8px; padding:12px 16px; font-size:0.84rem; color:var(--up); margin-bottom:14px;"></div>
+      <div id="sg_error" style="display:none; background:rgba(248, 81, 73,0.1); border:1px solid rgba(248, 81, 73,0.3); border-radius:8px; padding:12px 16px; font-size:0.84rem; color:var(--up); margin-bottom:14px;"></div>
 
       <div id="sg_content" style="display:none;">
 
@@ -2587,7 +2587,7 @@
     <div id="auth_modal" onclick="if (event.target === this) closeAuthModal();">
       <div class="auth-modal-card">
         <button class="auth-modal-close" onclick="closeAuthModal()">✕</button>
-        <div class="auth-modal-logo">🐳 Whale Watcher</div>
+        <div class="auth-modal-logo">🐳 WhaleScope</div>
         <div class="auth-tabs">
           <button
             class="auth-tab-btn active"
@@ -3055,8 +3055,8 @@
         const isBuy = side === 'BID';
         toast.className = 'toast';
         toast.style.backgroundColor = isBuy
-          ? 'rgba(0, 128, 0, 0.95)'
-          : 'rgba(200, 0, 0, 0.95)';
+          ? 'rgba(35, 134, 54, 0.95)'
+          : 'rgba(218, 54, 51, 0.95)';
         const displayAmount =
           currentCurrency === 'USD'
             ? `$${(amount / exchangeRate / 1e6).toFixed(2)}M`
@@ -3176,7 +3176,7 @@
               markers.push({
                 time: d.time,
                 position: 'inBar',
-                color: d.side === 'BID' ? '#00ff41' : '#f6465d',
+                color: d.side === 'BID' ? '#3fb950' : '#f85149',
                 shape: 'circle',
                 text: d.side === 'BID' ? 'B' : 'S',
               });
@@ -3255,7 +3255,7 @@
         const timeStr = `${(dateObj.getMonth() + 1).toString().padStart(2, '0')}.${dateObj.getDate().toString().padStart(2, '0')} ${dateObj.toLocaleTimeString('ko-KR', { hour12: false })}`;
         const row = `<tr onclick="showWhaleDetail(${index})">
           <td>${timeStr}</td>
-          <td style="color:${d.side === 'BID' ? '#00ff41' : 'var(--up)'}">${d.side === 'BID' ? '매수🟢' : '매도🔴'}</td>
+          <td style="color:${d.side === 'BID' ? '#3fb950' : 'var(--up)'}">${d.side === 'BID' ? '매수🟢' : '매도🔴'}</td>
           <td>${formatPrice(d.price)}</td>
           <td>${(d.amount / d.price).toFixed(4)}</td>
           <td><b>${formatWhaleAmount(d.amount)}</b></td>
@@ -3276,7 +3276,7 @@
         const d = clickableWhales[index];
         if (!d) return;
         const isBuy = d.side === 'BID';
-        const sideColor = isBuy ? '#00ff41' : 'var(--up)';
+        const sideColor = isBuy ? '#3fb950' : 'var(--up)';
         const dateObj = new Date((d.time - 32400) * 1000);
         const timeStr = `${(dateObj.getMonth() + 1).toString().padStart(2, '0')}.${dateObj.getDate().toString().padStart(2, '0')} ${dateObj.toLocaleTimeString('ko-KR', { hour12: false })}`;
         const nowKst = Math.floor(Date.now() / 1000) + 32400;
@@ -3323,10 +3323,10 @@
         chart = LightweightCharts.createChart(container, {
           width: container.offsetWidth,
           height: 420,
-          layout: { backgroundColor: '#1e2329', textColor: '#848e9c' },
+          layout: { backgroundColor: '#161b22', textColor: '#7d8590' },
           grid: {
-            vertLines: { color: '#2b3139' },
-            horzLines: { color: '#2b3139' },
+            vertLines: { color: '#21262d' },
+            horzLines: { color: '#21262d' },
           },
           timeScale: {
             timeVisible: true,
@@ -3335,18 +3335,18 @@
         });
         if (chartType === 'candle') {
           series = chart.addCandlestickSeries({
-            upColor: '#f6465d',
-            downColor: '#3165df',
-            borderUpColor: '#f6465d',
-            borderDownColor: '#3165df',
-            wickUpColor: '#f6465d',
-            wickDownColor: '#3165df',
+            upColor: '#3fb950',
+            downColor: '#f85149',
+            borderUpColor: '#3fb950',
+            borderDownColor: '#f85149',
+            wickUpColor: '#3fb950',
+            wickDownColor: '#f85149',
           });
         } else {
           series = chart.addAreaSeries({
-            lineColor: '#f0b90b',
-            topColor: 'rgba(240, 185, 11, 0.15)',
-            bottomColor: 'rgba(240, 185, 11, 0.0)',
+            lineColor: '#4f8ef7',
+            topColor: 'rgba(79, 142, 247, 0.15)',
+            bottomColor: 'rgba(79, 142, 247, 0.0)',
             lineWidth: 2,
           });
         }
@@ -3370,7 +3370,7 @@
           const timeStr = dateObj.toLocaleTimeString('ko-KR', {
             hour12: false,
           });
-          let inner = `<div style="font-weight:600; margin-bottom:5px; color:#848e9c; font-size:11px;">${timeStr} (KST)</div>`;
+          let inner = `<div style="font-weight:600; margin-bottom:5px; color:#7d8590; font-size:11px;">${timeStr} (KST)</div>`;
           if (chartType === 'candle') {
             const { open, high, low, close } = data;
             const fmt = (v) =>
@@ -3383,11 +3383,11 @@
                 : '₩' + Math.round(v).toLocaleString();
             const diff = close - open;
             const pct = ((diff / open) * 100).toFixed(2);
-            inner += `<div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span style="color:#848e9c">시가</span><span>${fmt(open)}</span></div>
-              <div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span style="color:#848e9c">고가</span><span style="color:#f6465d">${fmt(high)}</span></div>
-              <div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span style="color:#848e9c">저가</span><span style="color:#3165df">${fmt(low)}</span></div>
-              <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="color:#848e9c">종가</span><span style="font-weight:700">${fmt(close)}</span></div>
-              <div style="color:${diff >= 0 ? '#f6465d' : '#3165df'};font-weight:700;">${diff >= 0 ? '▲ +' : '▼ '}${pct}%</div>`;
+            inner += `<div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span style="color:#7d8590">시가</span><span>${fmt(open)}</span></div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span style="color:#7d8590">고가</span><span style="color:#3fb950">${fmt(high)}</span></div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span style="color:#7d8590">저가</span><span style="color:#f85149">${fmt(low)}</span></div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="color:#7d8590">종가</span><span style="font-weight:700">${fmt(close)}</span></div>
+              <div style="color:${diff >= 0 ? '#3fb950' : '#f85149'};font-weight:700;">${diff >= 0 ? '▲ +' : '▼ '}${pct}%</div>`;
           } else {
             const price = data;
             const currentPriceText =
@@ -3399,8 +3399,8 @@
               currentCurrency === 'USD' ? openPrice / exchangeRate : openPrice;
             const diff = price - rawOpen;
             const pct = ((diff / rawOpen) * 100).toFixed(2);
-            inner += `<div style="font-size:14px; font-weight:700; margin-bottom:4px; color:#eaecef;">${currentPriceText}</div>
-              <div style="color:${diff >= 0 ? '#f6465d' : '#3165df'}; font-weight:700;">${diff >= 0 ? '▲ +' : '▼ '}${pct}%</div>`;
+            inner += `<div style="font-size:14px; font-weight:700; margin-bottom:4px; color:#e6edf3;">${currentPriceText}</div>
+              <div style="color:${diff >= 0 ? '#3fb950' : '#f85149'}; font-weight:700;">${diff >= 0 ? '▲ +' : '▼ '}${pct}%</div>`;
           }
           tooltip.innerHTML = inner;
           let left = param.point.x + 20;
@@ -3849,7 +3849,7 @@
             const isBuy = d.side === 'BID';
             return `<tr>
             <td>${timeStr}</td>
-            <td style="color:${isBuy ? '#00ff41' : 'var(--up)'}">${isBuy ? '매수🟢' : '매도🔴'}</td>
+            <td style="color:${isBuy ? '#3fb950' : 'var(--up)'}">${isBuy ? '매수🟢' : '매도🔴'}</td>
             <td>${formatPrice(d.price)}</td>
             <td>${d.volume.toFixed(4)}</td>
             <td><b>${(d.amount / 1e8).toFixed(2)}억</b></td>
@@ -3984,11 +3984,11 @@
       }
 
       function _fgColor(v) {
-        if (v <= 25) return '#3165df';
-        if (v <= 45) return '#848e9c';
+        if (v <= 25) return '#f85149';
+        if (v <= 45) return '#e09020';
         if (v <= 55) return 'var(--text)';
         if (v <= 75) return 'var(--accent)';
-        return '#f6465d';
+        return '#3fb950';
       }
 
       function _applyFG(fg) {
@@ -4003,7 +4003,7 @@
           const sign = diff >= 0 ? '+' : '';
           document.getElementById('fg_delta').textContent =
             `전일 대비 ${sign}${diff} (어제 ${fg.yesterday})`;
-          document.getElementById('fg_delta').style.color = diff >= 0 ? '#f6465d' : '#3165df';
+          document.getElementById('fg_delta').style.color = diff >= 0 ? '#3fb950' : '#f85149';
         }
       }
 
@@ -4020,7 +4020,7 @@
         const pct = kp.premium_pct;
         const pctEl = document.getElementById('kp_val');
         pctEl.textContent = (pct !== null ? (pct >= 0 ? '+' : '') + pct + '%' : '--%');
-        pctEl.style.color = pct === null ? 'var(--text)' : pct >= 0 ? '#f6465d' : '#3165df';
+        pctEl.style.color = pct === null ? 'var(--text)' : pct >= 0 ? '#3fb950' : '#f85149';
         document.getElementById('kp_upbit').textContent =
           kp.upbit_price ? '₩' + Math.round(kp.upbit_price).toLocaleString() : '₩--';
         document.getElementById('kp_binance').textContent =
@@ -4115,10 +4115,10 @@
         const chart = LightweightCharts.createChart(el, {
           width: w,
           height: h,
-          layout: { backgroundColor: '#1e2329', textColor: '#848e9c' },
-          grid: { vertLines: { color: '#2b3139' }, horzLines: { color: '#2b3139' } },
-          rightPriceScale: { borderColor: '#2b3139' },
-          timeScale: { borderColor: '#2b3139', timeVisible: true, secondsVisible: false },
+          layout: { backgroundColor: '#161b22', textColor: '#7d8590' },
+          grid: { vertLines: { color: '#21262d' }, horzLines: { color: '#21262d' } },
+          rightPriceScale: { borderColor: '#21262d' },
+          timeScale: { borderColor: '#21262d', timeVisible: true, secondsVisible: false },
           crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
         });
 
@@ -4150,7 +4150,7 @@
 
         // AI signal (red solid)
         const aiSeries = chart.addLineSeries({
-          color: '#f6465d',
+          color: '#f85149',
           lineWidth: 2,
           priceLineVisible: false,
           lastValueVisible: true,
@@ -4294,7 +4294,7 @@
             <span style="color:var(--text-secondary);">${label}</span>
             <span style="font-weight:700;font-family:'Courier New',monospace;color:${color};">${pct}%</span>
           </div>
-          <div style="height:10px;background:rgba(43,49,57,0.8);border-radius:5px;overflow:hidden;">
+          <div style="height:10px;background:rgba(33, 38, 45,0.8);border-radius:5px;overflow:hidden;">
             <div style="height:100%;width:${pct}%;background:${color};opacity:0.75;border-radius:5px;"></div>
           </div>
         </div>`;
@@ -4303,14 +4303,14 @@
       function _btTrustTfRow(tf, rawPct, aiPct) {
         const rawBar = `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
           <span class="bt-trust-tf-tag">${tf}</span>
-          <div style="flex:1;height:8px;background:rgba(43,49,57,0.8);border-radius:4px;overflow:hidden;">
-            <div style="height:100%;width:${rawPct}%;background:#848e9c;border-radius:4px;"></div>
+          <div style="flex:1;height:8px;background:rgba(33, 38, 45,0.8);border-radius:4px;overflow:hidden;">
+            <div style="height:100%;width:${rawPct}%;background:#7d8590;border-radius:4px;"></div>
           </div>
           <span style="font-size:0.78rem;font-weight:700;font-family:'Courier New',monospace;width:36px;text-align:right;color:var(--text-secondary);">${rawPct}%</span>
         </div>`;
         const aiBar = `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
           <span class="bt-trust-tf-tag">${tf}</span>
-          <div style="flex:1;height:8px;background:rgba(43,49,57,0.8);border-radius:4px;overflow:hidden;">
+          <div style="flex:1;height:8px;background:rgba(33, 38, 45,0.8);border-radius:4px;overflow:hidden;">
             <div style="height:100%;width:${aiPct}%;background:var(--whale-buy);border-radius:4px;"></div>
           </div>
           <span style="font-size:0.78rem;font-weight:700;font-family:'Courier New',monospace;width:36px;text-align:right;color:var(--whale-buy);">${aiPct}%</span>
@@ -4332,7 +4332,7 @@
         if (hits === 3)      { icon = '✅'; lbl = '전 타임프레임<br>적중'; }
         else if (hits >= 1)  { icon = '⚡'; lbl = `${hits}/3<br>적중`; }
         else                 { icon = '❌'; lbl = '미적중'; }
-        const borderColor = hits >= 2 ? 'rgba(0,255,65,0.5)' : 'rgba(246,70,93,0.35)';
+        const borderColor = hits >= 2 ? 'rgba(63, 185, 80,0.5)' : 'rgba(248, 81, 73,0.35)';
         const tfRows = ['1m','5m','30m'].map(tf => {
           const r = c.results[tf];
           if (!r) return '';
@@ -4753,7 +4753,7 @@
         document.getElementById('sg_dir_bars').innerHTML =
           _sgBarRow('▲ 매수 신호', dirBuy.acc,  dirBuy.cnt,  bestDirBuyColor) +
           _sgBarRow('▼ 매도 신호', dirSell.acc, dirSell.cnt, bestDirSellColor) +
-          `<div style="margin-top:12px;padding:10px 12px;background:rgba(49,101,223,0.07);border-left:2px solid ${bestDirColor};border-radius:0 6px 6px 0;font-size:0.73rem;color:var(--text-secondary);line-height:1.5;">
+          `<div style="margin-top:12px;padding:10px 12px;background:rgba(56, 139, 253,0.07);border-left:2px solid ${bestDirColor};border-radius:0 6px 6px 0;font-size:0.73rem;color:var(--text-secondary);line-height:1.5;">
             ${bestDirLabel}가 <strong style="color:var(--text);">${Math.abs((bestDirAcc||0)-(worstDirAcc||0)).toFixed(1)}%p</strong> 더 정확합니다.
           </div>`;
 
@@ -4773,7 +4773,7 @@
         const trendBestLabel = {down:'내리는 중', flat:'보합세', up:'오르는 중'}[bestTrend];
         document.getElementById('sg_trend_bars').innerHTML =
           trendRows.map(t => _sgBarRow(t.label, pt[t.key]?.acc, pt[t.key]?.cnt, t.color)).join('') +
-          `<div style="margin-top:12px;padding:10px 12px;background:rgba(0,255,65,0.05);border-left:2px solid var(--whale-buy);border-radius:0 6px 6px 0;font-size:0.73rem;color:var(--text-secondary);line-height:1.5;">
+          `<div style="margin-top:12px;padding:10px 12px;background:rgba(63, 185, 80,0.05);border-left:2px solid var(--whale-buy);border-radius:0 6px 6px 0;font-size:0.73rem;color:var(--text-secondary);line-height:1.5;">
             시장이 <strong style="color:var(--text);">${trendBestLabel}</strong>일 때 신호가 ${pt[bestTrend]?.acc ?? '-'}%로 가장 정확합니다.
           </div>`;
 
@@ -4788,7 +4788,7 @@
         const ratioBestLabel = {buy_dom:'매수세가 강할', neutral:'중립적일', sell_dom:'매도세가 강할'}[bestRatio];
         document.getElementById('sg_ratio_bars').innerHTML =
           ratioRows.map(r => _sgBarRow(r.label, br[r.key]?.acc, br[r.key]?.cnt, r.color)).join('') +
-          `<div style="margin-top:12px;padding:10px 12px;background:rgba(240,185,11,0.05);border-left:2px solid var(--accent);border-radius:0 6px 6px 0;font-size:0.73rem;color:var(--text-secondary);line-height:1.5;">
+          `<div style="margin-top:12px;padding:10px 12px;background:rgba(79, 142, 247,0.05);border-left:2px solid var(--accent);border-radius:0 6px 6px 0;font-size:0.73rem;color:var(--text-secondary);line-height:1.5;">
             전체 시장 ${ratioBestLabel} 때 신호 정확도가 ${br[bestRatio]?.acc ?? '-'}%로 가장 높습니다.
           </div>`;
 
@@ -4807,10 +4807,10 @@
         comboSorted.forEach((c, i) => { rankMap[c.key] = i; });
         const rankLabels = ['최강 신호', '유효 신호', '주의', '최약 신호'];
         const rankColors = [
-          {bg:'rgba(0,255,65,0.06)',   border:'rgba(0,255,65,0.25)',   acc:'var(--whale-buy)'},
-          {bg:'rgba(240,185,11,0.04)', border:'rgba(240,185,11,0.2)',  acc:'var(--accent)'},
-          {bg:'rgba(246,70,93,0.04)',  border:'rgba(246,70,93,0.15)',  acc:'var(--text-secondary)'},
-          {bg:'rgba(246,70,93,0.08)',  border:'rgba(246,70,93,0.3)',   acc:'var(--up)'},
+          {bg:'rgba(63, 185, 80,0.06)',   border:'rgba(63, 185, 80,0.25)',   acc:'var(--whale-buy)'},
+          {bg:'rgba(79, 142, 247,0.04)', border:'rgba(79, 142, 247,0.2)',  acc:'var(--accent)'},
+          {bg:'rgba(248, 81, 73,0.04)',  border:'rgba(248, 81, 73,0.15)',  acc:'var(--text-secondary)'},
+          {bg:'rgba(248, 81, 73,0.08)',  border:'rgba(248, 81, 73,0.3)',   acc:'var(--up)'},
         ];
         const barBgMap = ['var(--whale-buy)', 'var(--accent)', 'var(--up)', 'var(--up)'];
         const barOpMap = ['1', '1', '0.5', '0.75'];
@@ -4828,7 +4828,7 @@
               </div>
               <span style="font-size:1.5rem;font-weight:700;font-family:'JetBrains Mono',monospace;color:${col.acc};">${cd.acc != null ? cd.acc + '%' : '-'}</span>
             </div>
-            <div style="height:6px;background:rgba(43,49,57,0.8);border-radius:3px;overflow:hidden;margin-bottom:8px;">
+            <div style="height:6px;background:rgba(33, 38, 45,0.8);border-radius:3px;overflow:hidden;margin-bottom:8px;">
               <div style="height:100%;width:${barW}%;background:${barBgMap[rank]};border-radius:3px;opacity:${barOpMap[rank]};"></div>
             </div>
             <div style="font-size:0.72rem;color:var(--text-secondary);line-height:1.5;">${(cd.cnt||0).toLocaleString()}건 · <strong style="color:${col.acc};">${rankLabels[rank]}</strong></div>
@@ -4880,63 +4880,63 @@
     </script>
 
     <!-- 신뢰도 패널 9개 신호 툴팁 -->
-    <div id="trust_signal_tooltip" style="display:none;position:fixed;z-index:99999;background:#1e2329;border:1px solid #2b3139;border-radius:10px;padding:16px 18px;width:300px;font-size:0.76rem;color:#eaecef;line-height:1.6;box-shadow:0 10px 32px rgba(0,0,0,0.55);pointer-events:none;">
-      <div style="font-weight:700;color:#f0b90b;margin-bottom:12px;font-size:0.82rem;">📊 AI가 분석하는 9가지 신호</div>
-      <div style="font-size:0.65rem;color:#848e9c;margin-bottom:10px;letter-spacing:0.5px;">예측 기여도 순 · 3개 모델(1m·5m·30m) 평균</div>
+    <div id="trust_signal_tooltip" style="display:none;position:fixed;z-index:99999;background:#161b22;border:1px solid #21262d;border-radius:10px;padding:16px 18px;width:300px;font-size:0.76rem;color:#e6edf3;line-height:1.6;box-shadow:0 10px 32px rgba(0,0,0,0.55);pointer-events:none;">
+      <div style="font-weight:700;color:#4f8ef7;margin-bottom:12px;font-size:0.82rem;">📊 AI가 분석하는 9가지 신호</div>
+      <div style="font-size:0.65rem;color:#7d8590;margin-bottom:10px;letter-spacing:0.5px;">예측 기여도 순 · 3개 모델(1m·5m·30m) 평균</div>
       <div style="display:flex;flex-direction:column;gap:7px;">
         <div style="display:flex;align-items:center;gap:8px;">
-          <span style="color:#f0b90b;font-weight:700;width:14px;flex-shrink:0;">①</span>
+          <span style="color:#4f8ef7;font-weight:700;width:14px;flex-shrink:0;">①</span>
           <span style="flex:1;font-weight:600;">고래 방향</span>
-          <div style="width:70px;height:5px;background:#2b3139;border-radius:3px;overflow:hidden;"><div style="height:100%;width:100%;background:#f0b90b;border-radius:3px;"></div></div>
-          <span style="color:#f0b90b;font-weight:700;width:36px;text-align:right;font-family:'Courier New',monospace;">20.5%</span>
+          <div style="width:70px;height:5px;background:#21262d;border-radius:3px;overflow:hidden;"><div style="height:100%;width:100%;background:#4f8ef7;border-radius:3px;"></div></div>
+          <span style="color:#4f8ef7;font-weight:700;width:36px;text-align:right;font-family:'Courier New',monospace;">20.5%</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span style="color:#f0b90b;font-weight:700;width:14px;flex-shrink:0;">②</span>
+          <span style="color:#4f8ef7;font-weight:700;width:14px;flex-shrink:0;">②</span>
           <span style="flex:1;font-weight:600;">가격 변화율</span>
-          <div style="width:70px;height:5px;background:#2b3139;border-radius:3px;overflow:hidden;"><div style="height:100%;width:66%;background:#f0b90b;border-radius:3px;opacity:0.75;"></div></div>
-          <span style="color:#848e9c;width:36px;text-align:right;font-family:'Courier New',monospace;">13.6%</span>
+          <div style="width:70px;height:5px;background:#21262d;border-radius:3px;overflow:hidden;"><div style="height:100%;width:66%;background:#4f8ef7;border-radius:3px;opacity:0.75;"></div></div>
+          <span style="color:#7d8590;width:36px;text-align:right;font-family:'Courier New',monospace;">13.6%</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span style="color:#f0b90b;font-weight:700;width:14px;flex-shrink:0;">③</span>
+          <span style="color:#4f8ef7;font-weight:700;width:14px;flex-shrink:0;">③</span>
           <span style="flex:1;font-weight:600;">매수 금액 비율</span>
-          <div style="width:70px;height:5px;background:#2b3139;border-radius:3px;overflow:hidden;"><div style="height:100%;width:58%;background:#f0b90b;border-radius:3px;opacity:0.7;"></div></div>
-          <span style="color:#848e9c;width:36px;text-align:right;font-family:'Courier New',monospace;">11.8%</span>
+          <div style="width:70px;height:5px;background:#21262d;border-radius:3px;overflow:hidden;"><div style="height:100%;width:58%;background:#4f8ef7;border-radius:3px;opacity:0.7;"></div></div>
+          <span style="color:#7d8590;width:36px;text-align:right;font-family:'Courier New',monospace;">11.8%</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span style="color:#f0b90b;font-weight:700;width:14px;flex-shrink:0;">④</span>
+          <span style="color:#4f8ef7;font-weight:700;width:14px;flex-shrink:0;">④</span>
           <span style="flex:1;font-weight:600;">매수 횟수 비율</span>
-          <div style="width:70px;height:5px;background:#2b3139;border-radius:3px;overflow:hidden;"><div style="height:100%;width:48%;background:#f0b90b;border-radius:3px;opacity:0.65;"></div></div>
-          <span style="color:#848e9c;width:36px;text-align:right;font-family:'Courier New',monospace;">9.9%</span>
+          <div style="width:70px;height:5px;background:#21262d;border-radius:3px;overflow:hidden;"><div style="height:100%;width:48%;background:#4f8ef7;border-radius:3px;opacity:0.65;"></div></div>
+          <span style="color:#7d8590;width:36px;text-align:right;font-family:'Courier New',monospace;">9.9%</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span style="color:#f0b90b;font-weight:700;width:14px;flex-shrink:0;">⑤</span>
+          <span style="color:#4f8ef7;font-weight:700;width:14px;flex-shrink:0;">⑤</span>
           <span style="flex:1;font-weight:600;">거래 횟수</span>
-          <div style="width:70px;height:5px;background:#2b3139;border-radius:3px;overflow:hidden;"><div style="height:100%;width:48%;background:#f0b90b;border-radius:3px;opacity:0.6;"></div></div>
-          <span style="color:#848e9c;width:36px;text-align:right;font-family:'Courier New',monospace;">9.8%</span>
+          <div style="width:70px;height:5px;background:#21262d;border-radius:3px;overflow:hidden;"><div style="height:100%;width:48%;background:#4f8ef7;border-radius:3px;opacity:0.6;"></div></div>
+          <span style="color:#7d8590;width:36px;text-align:right;font-family:'Courier New',monospace;">9.8%</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span style="color:#f0b90b;font-weight:700;width:14px;flex-shrink:0;">⑥</span>
+          <span style="color:#4f8ef7;font-weight:700;width:14px;flex-shrink:0;">⑥</span>
           <span style="flex:1;font-weight:600;">총 거래량</span>
-          <div style="width:70px;height:5px;background:#2b3139;border-radius:3px;overflow:hidden;"><div style="height:100%;width:47%;background:#f0b90b;border-radius:3px;opacity:0.6;"></div></div>
-          <span style="color:#848e9c;width:36px;text-align:right;font-family:'Courier New',monospace;">9.6%</span>
+          <div style="width:70px;height:5px;background:#21262d;border-radius:3px;overflow:hidden;"><div style="height:100%;width:47%;background:#4f8ef7;border-radius:3px;opacity:0.6;"></div></div>
+          <span style="color:#7d8590;width:36px;text-align:right;font-family:'Courier New',monospace;">9.6%</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span style="color:#f0b90b;font-weight:700;width:14px;flex-shrink:0;">⑦</span>
+          <span style="color:#4f8ef7;font-weight:700;width:14px;flex-shrink:0;">⑦</span>
           <span style="flex:1;font-weight:600;">가격 변동성</span>
-          <div style="width:70px;height:5px;background:#2b3139;border-radius:3px;overflow:hidden;"><div style="height:100%;width:46%;background:#f0b90b;border-radius:3px;opacity:0.55;"></div></div>
-          <span style="color:#848e9c;width:36px;text-align:right;font-family:'Courier New',monospace;">9.4%</span>
+          <div style="width:70px;height:5px;background:#21262d;border-radius:3px;overflow:hidden;"><div style="height:100%;width:46%;background:#4f8ef7;border-radius:3px;opacity:0.55;"></div></div>
+          <span style="color:#7d8590;width:36px;text-align:right;font-family:'Courier New',monospace;">9.4%</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span style="color:#f0b90b;font-weight:700;width:14px;flex-shrink:0;">⑧</span>
+          <span style="color:#4f8ef7;font-weight:700;width:14px;flex-shrink:0;">⑧</span>
           <span style="flex:1;font-weight:600;">고래 거래 금액</span>
-          <div style="width:70px;height:5px;background:#2b3139;border-radius:3px;overflow:hidden;"><div style="height:100%;width:42%;background:#f0b90b;border-radius:3px;opacity:0.55;"></div></div>
-          <span style="color:#848e9c;width:36px;text-align:right;font-family:'Courier New',monospace;">8.6%</span>
+          <div style="width:70px;height:5px;background:#21262d;border-radius:3px;overflow:hidden;"><div style="height:100%;width:42%;background:#4f8ef7;border-radius:3px;opacity:0.55;"></div></div>
+          <span style="color:#7d8590;width:36px;text-align:right;font-family:'Courier New',monospace;">8.6%</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span style="color:#f0b90b;font-weight:700;width:14px;flex-shrink:0;">⑨</span>
+          <span style="color:#4f8ef7;font-weight:700;width:14px;flex-shrink:0;">⑨</span>
           <span style="flex:1;font-weight:600;">거래 시간대</span>
-          <div style="width:70px;height:5px;background:#2b3139;border-radius:3px;overflow:hidden;"><div style="height:100%;width:33%;background:#f0b90b;border-radius:3px;opacity:0.5;"></div></div>
-          <span style="color:#848e9c;width:36px;text-align:right;font-family:'Courier New',monospace;">6.8%</span>
+          <div style="width:70px;height:5px;background:#21262d;border-radius:3px;overflow:hidden;"><div style="height:100%;width:33%;background:#4f8ef7;border-radius:3px;opacity:0.5;"></div></div>
+          <span style="color:#7d8590;width:36px;text-align:right;font-family:'Courier New',monospace;">6.8%</span>
         </div>
       </div>
     </div>
@@ -4948,13 +4948,13 @@
         display: none;
         position: fixed;
         z-index: 99999;
-        background: #1e2329;
-        border: 1px solid #2b3139;
+        background: #161b22;
+        border: 1px solid #21262d;
         border-radius: 10px;
         padding: 16px 18px;
         width: 290px;
         font-size: 0.76rem;
-        color: #eaecef;
+        color: #e6edf3;
         line-height: 1.75;
         box-shadow: 0 10px 32px rgba(0, 0, 0, 0.55);
         pointer-events: none;
@@ -4963,7 +4963,7 @@
       <div
         style="
           font-weight: 700;
-          color: #f0b90b;
+          color: #4f8ef7;
           margin-bottom: 10px;
           font-size: 0.82rem;
         "
@@ -4971,21 +4971,21 @@
         🤖 이 예측은 어떻게 만들어지나요?
       </div>
       <div style="display: flex; gap: 8px; margin-bottom: 7px">
-        <span style="color: #f0b90b; flex-shrink: 0">①</span>
+        <span style="color: #4f8ef7; flex-shrink: 0">①</span>
         <span
           ><b>고래 포착</b> — 직전에 발생한 1억원 이상 대형 거래를 기준으로
           분석을 시작합니다.</span
         >
       </div>
       <div style="display: flex; gap: 8px; margin-bottom: 7px">
-        <span style="color: #f0b90b; flex-shrink: 0">②</span>
+        <span style="color: #4f8ef7; flex-shrink: 0">②</span>
         <span
           ><b>패턴 분석</b> — 그 거래 전 10분간 매수·매도 비율, 거래량, 가격
           흐름, 시간대 등을 살펴봅니다.</span
         >
       </div>
       <div style="display: flex; gap: 8px; margin-bottom: 10px">
-        <span style="color: #f0b90b; flex-shrink: 0">③</span>
+        <span style="color: #4f8ef7; flex-shrink: 0">③</span>
         <span
           ><b>AI 판단</b> — 과거 고래 거래 1,100건+ 사례를 학습한 모델이 가격이
           오를지 내릴지 예측합니다.</span
@@ -4993,9 +4993,9 @@
       </div>
       <div
         style="
-          border-top: 1px solid #2b3139;
+          border-top: 1px solid #21262d;
           padding-top: 8px;
-          color: #848e9c;
+          color: #7d8590;
           font-size: 0.7rem;
         "
       >

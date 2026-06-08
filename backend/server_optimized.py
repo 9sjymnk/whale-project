@@ -1,4 +1,4 @@
-# backend/server_optimized.py  ← 데모용 최적화 버전 (포트 8001)
+# backend/server_optimized.py  ← 데모용 최적화 버전 (포트 8081)
 from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer

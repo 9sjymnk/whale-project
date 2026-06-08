@@ -1,23 +1,27 @@
-# 🐳 Whale Watcher Intelligence Pro (V63)
+# 🐋 WhaleScope
 
-실시간 업비트 데이터를 기반으로 고래(대량 거래)의 움직임을 추적하고 시각화하는 대시보드입니다.
-본 프로젝트는 졸업 작품용으로 제작되었으며, 실시간 기준가 동기화 및 전 시간대 반응형 차트를 지원합니다.
+고래(대량 거래) 탐지 기반 암호화폐 가격 예측 플랫폼입니다.
+업비트 실시간 체결 데이터를 수집·분석하고, AI 모델로 가격 방향을 예측합니다.
 
 ## 🚀 주요 기능
 
-- **실시간 고래 추적**: 1억 원 이상 거래 시 즉각적인 토스트 알림 및 차트 마커 표시
-- **업비트 공식 동기화**: 매일 아침 09:00(KST) 기준가 자동 갱신 및 등락률 계산
-- **멀티 타임프레임**: 1초/1분/30분/1시간 단위 라인 차트 지원
-- **전문가용 UI**: Streamlit 스타일의 블랙 테마 지표 카드 및 정밀 툴팁
+- **실시간 대시보드**: 고래 거래 감지 시 즉각 알림 및 차트 마커 표시
+- **고래 분석**: 시간대별·날짜별 고래 활동 통계 시각화
+- **AI 가격 예측**: 고래 거래 발생 후 1분·5분·30분 방향 예측 (신뢰도 HIGH/MED/LOW)
+- **백테스팅**: AI 예측 vs 실제 결과 정확도 검증
+- **신호 신뢰도**: 시간대·조건별 예측 신호 신뢰도 분석
+- **Slack 알림**: 고래 거래 발생 시 Webhook으로 즉시 알림
 
 ## 🛠 Tech Stack
 
-- **Backend**: Python 3.x, FastAPI, Uvicorn, Psycopg2
-- **Frontend**: Vanilla JS, Lightweight Charts (by TradingView)
-- **Database**: PostgreSQL (AWS RDS)
+- **Backend**: Python 3, FastAPI, Uvicorn, psycopg2, python-jose, bcrypt, python-dotenv
+- **AI/ML**: XGBoost, scikit-learn, numpy, pandas
+- **Frontend**: Vanilla JS, Lightweight Charts (TradingView)
+- **Database**: PostgreSQL 15 (로컬 Docker)
+- **Infra**: AWS EC2 (수집기), Docker Compose (PostgreSQL)
 - **API**: Upbit Open API
 
-## 💻 실행 방법 (How to Run)
+## 💻 실행 방법
 
 ### 1. 의존성 설치
 
@@ -29,13 +33,13 @@ pip install fastapi uvicorn psycopg2 requests python-jose bcrypt python-dotenv x
 
 ```bash
 cd backend
-python server.py
+python server_optimized.py
 ```
 
 ### 3. AI 예측 모델 학습 (최초 1회)
 
 ```bash
-# 특성 데이터 생성 (DB → data/features.csv)
+# 피처 데이터 생성 (DB → data/features.csv)
 cd analyzer
 python feature_engineering.py
 
@@ -45,71 +49,17 @@ python train_model.py
 
 ### 4. 프론트엔드 실행
 
-`frontend/index.html` 파일을 브라우저에서 열거나 라이브 서버로 실행합니다.
-
----
-
-## 🎬 데모 비교 실행 (연결 속도 최적화 전/후)
-
-터미널 2개를 열어 기존 버전과 최적화 버전을 동시에 실행합니다.
-
-```bash
-# 터미널 1 — 기존 버전 (포트 8000)
-cd backend
-python server.py
-
-# 터미널 2 — 최적화 버전 (포트 8081)
-cd backend
-python server_optimized.py
-```
-
-브라우저 탭 2개를 열어 나란히 비교합니다.
-
-| 탭 | URL | 버전 |
-|---|---|---|
-| 탭 1 | `frontend/index.html` | 기존 (포트 8000) |
-| 탭 2 | `frontend/index_optimized.html` | 최적화 (포트 8081) |
-
-**비교 수치**
-
-| 항목 | 기존 | 최적화 |
-|---|---|---|
-| 조회 행수 | 163만 행 (전체) | 11만 행 (최근 24h) |
-| 초기 연결 대기 | 약 8초 | 약 0.7초 |
-| 개선 방법 | — | 24h 범위 제한 + `(code, timestamp)` 복합 인덱스 |
+`frontend/index_optimized.html` 파일을 브라우저에서 열거나 라이브 서버로 실행합니다.
 
 ---
 
 ## ⚡ AWS EC2 성능 설정 (CPU 크레딧 무제한)
 
 T2/T3 같은 버스터블 인스턴스는 CPU 크레딧이 소진되면 성능이 기준치(20~40%)로 **자동 스로틀링**됩니다.
-데이터 수집·쿼리·WebSocket 처리가 전반적으로 느려지는 원인이 됩니다.
 
 **설정 방법 (AWS 콘솔)**
 
 > EC2 → 인스턴스 선택 → 작업 → 인스턴스 설정 → **크레딧 사양 변경 → 무제한 체크**
-
-또는 AWS CLI:
-
-```bash
-aws ec2 modify-instance-credit-specification \
-  --instance-credit-specifications "InstanceId=i-xxxxxxxxxxxx,CpuCredits=unlimited"
-```
-
-**크레딧 잔량 확인 (CloudWatch)**
-
-```bash
-aws cloudwatch get-metric-statistics \
-  --namespace AWS/EC2 \
-  --metric-name CPUCreditBalance \
-  --dimensions Name=InstanceId,Value=i-xxxxxxxxxxxx \
-  --start-time $(date -u -d '1 hour ago' +%FT%TZ) \
-  --end-time $(date -u +%FT%TZ) \
-  --period 300 \
-  --statistics Average
-```
-
-`CPUCreditBalance`가 0에 가까우면 스로틀링 중입니다. 무제한 모드는 초과 사용량에 소액 추가 과금이 발생합니다.
 
 ---
 
